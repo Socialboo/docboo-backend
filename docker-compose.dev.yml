@@ -1,0 +1,19 @@
+# Hot-reload override for the API:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# api -> dotnet watch on :5248 (LibreOffice included, same packages as the production image)
+services:
+  api:
+    build:
+      target: dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - .:/src
+      - api-build:/build
+      - api-nuget:/root/.nuget/packages
+    healthcheck:
+      start_period: 180s
+
+volumes:
+  api-build:
+  api-nuget:

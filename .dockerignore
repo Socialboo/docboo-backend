@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/.idea/
+**/.vs/
+**/TestResults/
+**/*.user
+.git/
+.gitattributes
+docs/
+docker/
+docker-compose*.yml
+.env
+.env.*
+README.md
+LICENSE
