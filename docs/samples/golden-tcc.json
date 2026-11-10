@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "profileId": "abnt-tcc",
+  "profileOverrides": { "fontFamily": null },
+  "metadata": {
+    "institution": "Universidade Federal Exemplo",
+    "faculty": "Faculdade de Computação",
+    "course": "Bacharelado em Ciência da Computação",
+    "authors": ["Maria Exemplo da Silva"],
+    "title": "Formatação automática de trabalhos acadêmicos",
+    "subtitle": "um estudo de caso com documentos estruturados",
+    "advisor": "Prof. Dr. João Orientador",
+    "coAdvisor": null,
+    "city": "São Paulo",
+    "year": 2026,
+    "nature": "Trabalho de Conclusão de Curso apresentado ao curso de Bacharelado em Ciência da Computação da Universidade Federal Exemplo como requisito parcial para obtenção do título de Bacharel em Ciência da Computação."
+  },
+  "preTextual": {
+    "cover": { "enabled": true },
+    "titlePage": { "enabled": true },
+    "abstractPt": {
+      "enabled": true,
+      "text": "Este trabalho apresenta uma ferramenta que gera documentos acadêmicos formatados a partir de um modelo estruturado. O modelo separa conteúdo e formatação, permitindo aplicar perfis de norma configuráveis. Os resultados indicam redução do retrabalho de formatação e maior consistência entre os documentos produzidos.",
+      "keywords": ["formatação", "documentos estruturados", "normalização"]
+    },
+    "abstractEn": {
+      "enabled": true,
+      "text": "This work presents a tool that generates formatted academic documents from a structured model. The model separates content from formatting, allowing configurable norm profiles to be applied.",
+      "keywords": ["formatting", "structured documents", "standards"]
+    },
+    "lists": { "figures": true, "tables": true }
+  },
+  "textual": {
+    "sections": [
+      {
+        "id": "sec-intro",
+        "title": "Introdução",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "id": "p-intro-1",
+            "content": [
+              { "type": "text", "text": "A formatação de trabalhos acadêmicos consome parte relevante do tempo dos estudantes ", "marks": [] },
+              { "type": "citation", "refIds": ["souza2021"], "locator": null, "mode": "parenthetical" },
+              { "type": "text", "text": ". Ferramentas de edição genéricas não impõem uma estrutura", "marks": [] },
+              {
+                "type": "footnote",
+                "id": "fn-1",
+                "content": [{ "type": "text", "text": "Por estrutura entende-se a hierarquia de seções e os elementos obrigatórios do trabalho.", "marks": [] }]
+              },
+              { "type": "text", "text": ".", "marks": [] }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "id": "p-intro-2",
+            "content": [
+              { "type": "text", "text": "Segundo ", "marks": [] },
+              { "type": "citation", "refIds": ["lima2019"], "locator": "p. 45", "mode": "narrative" },
+              { "type": "text", "text": ", a separação entre conteúdo e apresentação é um princípio ", "marks": [] },
+              { "type": "text", "text": "fundamental", "marks": ["italic"] },
+              { "type": "text", "text": " da editoração eletrônica.", "marks": [] }
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "sec-objetivos",
+            "title": "Objetivos",
+            "blocks": [
+              {
+                "type": "list",
+                "id": "l-objetivos",
+                "ordered": false,
+                "items": [
+                  { "content": [{ "type": "text", "text": "definir um modelo de documento estruturado;", "marks": [] }] },
+                  { "content": [{ "type": "text", "text": "gerar arquivos .docx com estilos reais;", "marks": [] }] },
+                  { "content": [{ "type": "text", "text": "converter o resultado para PDF.", "marks": [] }] }
+                ]
+              }
+            ],
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "sec-fundamentacao",
+        "title": "Fundamentação teórica",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "id": "p-fund-1",
+            "content": [{ "type": "text", "text": "Esta seção apresenta os conceitos que fundamentam o trabalho.", "marks": [] }]
+          }
+        ],
+        "children": [
+          {
+            "id": "sec-documentos",
+            "title": "Documentos estruturados",
+            "blocks": [
+              {
+                "type": "longQuote",
+                "id": "q-1",
+                "content": [
+                  { "type": "text", "text": "Um documento estruturado descreve o papel de cada parte do texto, e não a sua aparência. A aparência é aplicada depois, por regras externas ao conteúdo, o que permite produzir versões diferentes a partir da mesma fonte e garante consistência entre documentos de um mesmo tipo ", "marks": [] },
+                  { "type": "citation", "refIds": ["lima2019"], "locator": "p. 52", "mode": "parenthetical" },
+                  { "type": "text", "text": ".", "marks": [] }
+                ]
+              }
+            ],
+            "children": [
+              {
+                "id": "sec-estilos",
+                "title": "Estilos de parágrafo",
+                "blocks": [
+                  {
+                    "type": "paragraph",
+                    "id": "p-estilos-1",
+                    "content": [{ "type": "text", "text": "Estilos nomeados permitem que o autor altere a formatação de forma global.", "marks": [] }]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sec-resultados",
+        "title": "Resultados",
+        "blocks": [
+          {
+            "type": "table",
+            "id": "t-1",
+            "title": [{ "type": "text", "text": "Tempo médio de formatação por documento", "marks": [] }],
+            "source": [{ "type": "text", "text": "Elaborado pela autora (2026).", "marks": [] }],
+            "rows": [
+              {
+                "header": true,
+                "cells": [
+                  { "content": [{ "type": "text", "text": "Método", "marks": ["bold"] }], "colSpan": 1, "rowSpan": 1 },
+                  { "content": [{ "type": "text", "text": "Tempo (min)", "marks": ["bold"] }], "colSpan": 1, "rowSpan": 1 }
+                ]
+              },
+              {
+                "header": false,
+                "cells": [
+                  { "content": [{ "type": "text", "text": "Manual", "marks": [] }], "colSpan": 1, "rowSpan": 1 },
+                  { "content": [{ "type": "text", "text": "95", "marks": [] }], "colSpan": 1, "rowSpan": 1 }
+                ]
+              },
+              {
+                "header": false,
+                "cells": [
+                  { "content": [{ "type": "text", "text": "Automatizado", "marks": [] }], "colSpan": 1, "rowSpan": 1 },
+                  { "content": [{ "type": "text", "text": "12", "marks": [] }], "colSpan": 1, "rowSpan": 1 }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "figure",
+            "id": "f-1",
+            "assetId": "asset-fluxo",
+            "caption": [{ "type": "text", "text": "Fluxo de exportação do documento", "marks": [] }],
+            "source": [{ "type": "text", "text": "Elaborado pela autora (2026).", "marks": [] }],
+            "widthPercent": 80
+          }
+        ],
+        "children": []
+      },
+      {
+        "id": "sec-conclusao",
+        "title": "Conclusão",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "id": "p-conc-1",
+            "content": [
+              { "type": "text", "text": "A abordagem estruturada mostrou-se viável", "marks": [] },
+              { "type": "hardBreak" },
+              { "type": "text", "text": "e reduziu o tempo de formatação.", "marks": [] }
+            ]
+          }
+        ],
+        "children": []
+      }
+    ]
+  },
+  "postTextual": {
+    "appendices": [
+      {
+        "id": "ap-a",
+        "title": "Questionário aplicado aos participantes",
+        "blocks": [
+          { "type": "paragraph", "id": "p-ap-a-1", "content": [{ "type": "text", "text": "1. Quanto tempo você gasta formatando um trabalho?", "marks": [] }] }
+        ]
+      }
+    ],
+    "annexes": [
+      {
+        "id": "an-a",
+        "title": "Modelo de folha de aprovação da instituição",
+        "blocks": [
+          { "type": "paragraph", "id": "p-an-a-1", "content": [{ "type": "text", "text": "Conteúdo fornecido pela instituição.", "marks": [] }] }
+        ]
+      }
+    ]
+  },
+  "references": [
+    {
+      "id": "souza2021",
+      "type": "article-journal",
+      "title": "Tempo dedicado à formatação de trabalhos de conclusão de curso",
+      "author": [{ "family": "Souza", "given": "Ana" }, { "family": "Pereira", "given": "Carlos" }],
+      "issued": { "date-parts": [[2021]] },
+      "container-title": "Revista Exemplo de Educação",
+      "volume": "12",
+      "issue": "3",
+      "page": "10-25"
+    },
+    {
+      "id": "lima2019",
+      "type": "book",
+      "title": "Editoração eletrônica",
+      "author": [{ "family": "Lima", "given": "Roberto" }],
+      "issued": { "date-parts": [[2019]] },
+      "publisher": "Editora Exemplo",
+      "publisher-place": "Rio de Janeiro",
+      "edition": "2"
+    },
+    {
+      "id": "abc2020",
+      "type": "webpage",
+      "title": "Guia de normalização de trabalhos",
+      "author": [{ "literal": "Biblioteca Central Exemplo" }],
+      "issued": { "date-parts": [[2020]] },
+      "URL": "https://example.org/guia",
+      "accessed": { "date-parts": [[2026, 3, 15]] }
+    }
+  ]
+}

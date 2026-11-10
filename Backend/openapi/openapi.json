@@ -1,0 +1,1635 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Docboo API",
+    "description": "Formatador de trabalhos acadêmicos (ABNT).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Runs all registered health checks and returns their status.",
+        "operationId": "GetHealth",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profiles": {
+      "get": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Lists the available norm profiles.",
+        "operationId": "ListProfiles",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/works": {
+      "get": {
+        "tags": [
+          "Works"
+        ],
+        "summary": "Lists the user's works, most recently edited first.",
+        "operationId": "ListWorks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkSummaryResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkSummaryResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Works"
+        ],
+        "summary": "Creates a work with an empty document for the chosen norm profile.",
+        "operationId": "CreateWork",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/works/{id}": {
+      "get": {
+        "tags": [
+          "Works"
+        ],
+        "summary": "Gets a work including its document.",
+        "operationId": "GetWork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Works"
+        ],
+        "summary": "Deletes a work.",
+        "operationId": "DeleteWork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/works/{id}/document": {
+      "put": {
+        "tags": [
+          "Works"
+        ],
+        "summary": "Replaces the document (autosave). The document is sanitized and validated; send the\n`version` you loaded. A stale version returns 409 with `currentVersion`.",
+        "operationId": "SaveWorkDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDocumentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveDocumentResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveDocumentResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveDocumentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AbstractElement": {
+        "required": [
+          "enabled",
+          "text",
+          "keywords"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text. Paragraph breaks are `\\n`."
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Attachment": {
+        "required": [
+          "id",
+          "title",
+          "blocks"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "Appendix (written by the author) or annex (third-party material)."
+      },
+      "Block": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/BlockParagraphBlock"
+          },
+          {
+            "$ref": "#/components/schemas/BlockLongQuoteBlock"
+          },
+          {
+            "$ref": "#/components/schemas/BlockListBlock"
+          },
+          {
+            "$ref": "#/components/schemas/BlockFigureBlock"
+          },
+          {
+            "$ref": "#/components/schemas/BlockTableBlock"
+          }
+        ],
+        "description": "Block-level content inside a section, appendix or annex. Discriminated by `type`.",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "paragraph": "#/components/schemas/BlockParagraphBlock",
+            "longQuote": "#/components/schemas/BlockLongQuoteBlock",
+            "list": "#/components/schemas/BlockListBlock",
+            "figure": "#/components/schemas/BlockFigureBlock",
+            "table": "#/components/schemas/BlockTableBlock"
+          }
+        }
+      },
+      "BlockFigureBlock": {
+        "required": [
+          "assetId",
+          "caption",
+          "source",
+          "widthPercent",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "figure"
+            ],
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string",
+            "description": "Uploaded image id."
+          },
+          "caption": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            }
+          },
+          "source": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "description": "Source line (\"Fonte: ...\"), without the \"Fonte:\" prefix."
+          },
+          "widthPercent": {
+            "type": "integer",
+            "description": "Width relative to the text area, 10..100.",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BlockListBlock": {
+        "required": [
+          "ordered",
+          "items",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "list"
+            ],
+            "type": "string"
+          },
+          "ordered": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListItem"
+            }
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BlockLongQuoteBlock": {
+        "required": [
+          "content",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "longQuote"
+            ],
+            "type": "string"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "description": "Quoted text, usually ending with a citation inline."
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Direct quotation longer than three lines. Formatting (indent, size, spacing) comes from the profile."
+      },
+      "BlockParagraphBlock": {
+        "required": [
+          "content",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "paragraph"
+            ],
+            "type": "string"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            }
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BlockTableBlock": {
+        "required": [
+          "title",
+          "source",
+          "rows",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "table"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            }
+          },
+          "source": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "description": "Source line (\"Fonte: ...\"), without the \"Fonte:\" prefix."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableRow"
+            }
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CitationMode": {
+        "enum": [
+          "parenthetical",
+          "narrative"
+        ]
+      },
+      "CreateWorkRequest": {
+        "required": [
+          "profileId"
+        ],
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string",
+            "description": "Norm profile id (see `GET /api/profiles`)."
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Initial title. Defaults to \"Trabalho sem título\"."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Creates a work with an empty document for the chosen norm profile."
+      },
+      "CslDate": {
+        "type": "object",
+        "properties": {
+          "date-parts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "description": "[[year, month?, day?]] (a second entry denotes a range)."
+          },
+          "literal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "CslItem": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "description": "CSL item type: book, article-journal, chapter, thesis, webpage, ..."
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CslName"
+            }
+          },
+          "editor": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CslName"
+            }
+          },
+          "issued": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CslDate"
+              }
+            ]
+          },
+          "accessed": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CslDate"
+              }
+            ]
+          },
+          "container-title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publisher": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publisher-place": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "edition": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "volume": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "page": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "genre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "URL": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "DOI": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ISBN": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ISSN": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "description": "Bibliographic item in CSL-JSON format (https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html).\nThe common fields are typed; any other CSL field is preserved in Dictionary&lt;string, JsonElement&gt;? CslItem.Extra."
+      },
+      "CslName": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "given": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "literal": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Institutional author or a name that must not be split."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DocumentMetadata": {
+        "required": [
+          "institution",
+          "faculty",
+          "course",
+          "authors",
+          "title",
+          "subtitle",
+          "advisor",
+          "coAdvisor",
+          "city",
+          "year",
+          "nature"
+        ],
+        "type": "object",
+        "properties": {
+          "institution": {
+            "type": "string"
+          },
+          "faculty": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course": {
+            "type": "string"
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "advisor": {
+            "type": "string"
+          },
+          "coAdvisor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": "string",
+            "description": "City of the institution (local)."
+          },
+          "year": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Year of deposit/presentation.",
+            "format": "int32"
+          },
+          "nature": {
+            "type": "string",
+            "description": "Nature of the work (\"Trabalho de Conclusão de Curso apresentado ...\")."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DocumentModel": {
+        "required": [
+          "schemaVersion",
+          "profileId",
+          "profileOverrides",
+          "metadata",
+          "preTextual",
+          "textual",
+          "postTextual",
+          "references"
+        ],
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Version of this JSON schema. Currently always 1.",
+            "format": "int32"
+          },
+          "profileId": {
+            "type": "string",
+            "description": "Norm profile used to format the work (e.g. `abnt-tcc`)."
+          },
+          "profileOverrides": {
+            "description": "Per-work overrides of profile options that the profile allows to change.",
+            "$ref": "#/components/schemas/ProfileOverrides"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/DocumentMetadata"
+          },
+          "preTextual": {
+            "$ref": "#/components/schemas/PreTextual"
+          },
+          "textual": {
+            "$ref": "#/components/schemas/Textual"
+          },
+          "postTextual": {
+            "$ref": "#/components/schemas/PostTextual"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CslItem"
+            },
+            "description": "Bibliographic references (CSL-JSON compatible). Citations point to string CslItem.Id."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Source of truth for an academic work (schema v1). Edited by the frontend, stored as JSONB,\nand consumed by the Exporter. Breaking changes require a new int DocumentModel.SchemaVersion\nand a migration step (see docs/document-model.md)."
+      },
+      "FontFamilyOption": {
+        "enum": [
+          "timesNewRoman",
+          "arial",
+          null
+        ]
+      },
+      "GeneratedLists": {
+        "required": [
+          "figures",
+          "tables"
+        ],
+        "type": "object",
+        "properties": {
+          "figures": {
+            "type": "boolean"
+          },
+          "tables": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "HealthCheckEntry": {
+        "required": [
+          "name",
+          "status",
+          "durationMs"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Check name."
+          },
+          "status": {
+            "type": "string",
+            "description": "Check status."
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "How long the check took, in milliseconds.",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "HealthResponse": {
+        "required": [
+          "status",
+          "version",
+          "checks"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Overall status: `Healthy`, `Degraded` or `Unhealthy`."
+          },
+          "version": {
+            "type": "string",
+            "description": "API assembly version."
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckEntry"
+            },
+            "description": "Individual dependency checks (database, etc.)."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Liveness/readiness snapshot returned by `GET /api/health`."
+      },
+      "Inline": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/InlineTextInline"
+          },
+          {
+            "$ref": "#/components/schemas/InlineHardBreakInline"
+          },
+          {
+            "$ref": "#/components/schemas/InlineCitationInline"
+          },
+          {
+            "$ref": "#/components/schemas/InlineFootnoteInline"
+          }
+        ],
+        "description": "Inline content inside a block. Discriminated by `type`; mirrors the editor (Tiptap) node types.",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "text": "#/components/schemas/InlineTextInline",
+            "hardBreak": "#/components/schemas/InlineHardBreakInline",
+            "citation": "#/components/schemas/InlineCitationInline",
+            "footnote": "#/components/schemas/InlineFootnoteInline"
+          }
+        }
+      },
+      "InlineCitationInline": {
+        "required": [
+          "refIds",
+          "locator",
+          "mode",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "citation"
+            ],
+            "type": "string"
+          },
+          "refIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "locator": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Page or other locator, e.g. \"p. 12\"."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CitationMode"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Citation of one or more references (author-date system)."
+      },
+      "InlineFootnoteInline": {
+        "required": [
+          "id",
+          "content",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "footnote"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "description": "Footnote text. Footnotes cannot contain other footnotes."
+          }
+        },
+        "additionalProperties": false
+      },
+      "InlineHardBreakInline": {
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "hardBreak"
+            ],
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InlineTextInline": {
+        "required": [
+          "text",
+          "marks",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "text"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text. Line breaks are represented by HardBreakInline, not by `\\n`."
+          },
+          "marks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TextMark"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListItem": {
+        "required": [
+          "content"
+        ],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostTextual": {
+        "required": [
+          "appendices",
+          "annexes"
+        ],
+        "type": "object",
+        "properties": {
+          "appendices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            }
+          },
+          "annexes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PreTextual": {
+        "required": [
+          "cover",
+          "titlePage",
+          "abstractPt",
+          "abstractEn",
+          "lists"
+        ],
+        "type": "object",
+        "properties": {
+          "cover": {
+            "$ref": "#/components/schemas/ToggleElement"
+          },
+          "titlePage": {
+            "$ref": "#/components/schemas/ToggleElement"
+          },
+          "abstractPt": {
+            "description": "Abstract in the document language (resumo).",
+            "$ref": "#/components/schemas/AbstractElement"
+          },
+          "abstractEn": {
+            "description": "Abstract in a foreign language (abstract). Optional.",
+            "$ref": "#/components/schemas/AbstractElement"
+          },
+          "lists": {
+            "description": "Which generated lists to include. The table of contents is always generated.",
+            "$ref": "#/components/schemas/GeneratedLists"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfileOverrides": {
+        "required": [
+          "fontFamily"
+        ],
+        "type": "object",
+        "properties": {
+          "fontFamily": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FontFamilyOption"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "description": "Profile options a work may override. Unset values use the profile default."
+      },
+      "ProfileResponse": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "maxSectionDepth"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "maxSectionDepth": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Norm profile available for new works."
+      },
+      "SaveDocumentRequest": {
+        "required": [
+          "version",
+          "document"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Version the client edited. A mismatch returns 409 with the current version.",
+            "format": "int32"
+          },
+          "document": {
+            "$ref": "#/components/schemas/DocumentModel"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Replaces the document of a work (autosave)."
+      },
+      "SaveDocumentResponse": {
+        "required": [
+          "version",
+          "updatedAt",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "description": "New version to use in the next save.",
+            "format": "int32"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Save time (UTC).",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title derived from the document metadata."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Section": {
+        "required": [
+          "id",
+          "title",
+          "blocks",
+          "children"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "Chapter or section. The heading level is the nesting depth (1..5); numbering is generated."
+      },
+      "TableCell": {
+        "required": [
+          "content",
+          "colSpan",
+          "rowSpan"
+        ],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            }
+          },
+          "colSpan": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rowSpan": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TableRow": {
+        "required": [
+          "header",
+          "cells"
+        ],
+        "type": "object",
+        "properties": {
+          "header": {
+            "type": "boolean",
+            "description": "Header rows repeat on page breaks."
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableCell"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TextMark": {
+        "enum": [
+          "bold",
+          "italic",
+          "underline",
+          "superscript",
+          "subscript"
+        ]
+      },
+      "Textual": {
+        "required": [
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ToggleElement": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkResponse": {
+        "required": [
+          "id",
+          "title",
+          "profileId",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "document"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Work id.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title derived from the document metadata."
+          },
+          "profileId": {
+            "type": "string",
+            "description": "Norm profile of the work."
+          },
+          "version": {
+            "type": "integer",
+            "description": "Send it back in int SaveDocumentRequest.Version to save.",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation time (UTC).",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Last save time (UTC).",
+            "format": "date-time"
+          },
+          "document": {
+            "description": "The document model (schema v1).",
+            "$ref": "#/components/schemas/DocumentModel"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Full work, including the document model."
+      },
+      "WorkSummaryResponse": {
+        "required": [
+          "id",
+          "title",
+          "profileId",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Work as shown in the list (without the document body)."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Profiles"
+    },
+    {
+      "name": "Works"
+    }
+  ]
+}

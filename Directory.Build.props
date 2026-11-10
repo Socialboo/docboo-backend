@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- XML comments feed the OpenAPI descriptions (Swagger/Scalar). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    docker-compose.dev.yml bind-mounts the source tree. Keep container build output out of the
+    host's bin/obj so Windows and Linux restores never overwrite each other.
+  -->
+  <PropertyGroup Condition="'$(DOCBOO_CONTAINER_BUILD)' == 'true'">
+    <BaseIntermediateOutputPath>/build/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>/build/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <!-- The host's own bin/obj are still in the mounted tree: never compile their generated files. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

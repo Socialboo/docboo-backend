@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/Application.Tests/Application.Tests.csproj" />
+    <Project Path="tests/Exporter.Tests/Exporter.Tests.csproj" />
+    <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
+  </Folder>
+  <Project Path="Application/Application.csproj" />
+  <Project Path="Backend/Backend.csproj" />
+  <Project Path="Domain/Domain.csproj" />
+  <Project Path="DTOs/DTOs.csproj" />
+  <Project Path="Exporter/Exporter.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+</Solution>

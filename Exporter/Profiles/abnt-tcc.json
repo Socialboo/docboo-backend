@@ -1,0 +1,6 @@
+{
+  "id": "abnt-tcc",
+  "name": "ABNT — TCC / Monografia",
+  "description": "Trabalhos acadêmicos conforme as regras de formatação da ABNT (A4, margens 3/2 cm, fonte 12, espaçamento 1,5).",
+  "maxSectionDepth": 5
+}
