@@ -104,7 +104,10 @@ O [docboo-frontend](https://github.com/Socialboo/docboo-frontend) acessa esta AP
 | POST | `/api/works` | Cria um trabalho `{ profileId, title? }` com documento vazio |
 | GET | `/api/works/{id}` | Trabalho com o documento |
 | PUT | `/api/works/{id}/document` | Salva `{ version, document }`. Responde 409 se a versão estiver desatualizada, 400 com erros por caminho ou 413 acima de 4 MiB |
-| DELETE | `/api/works/{id}` | Remove o trabalho, junto com as exportações e os arquivos dele |
+| DELETE | `/api/works/{id}` | Remove o trabalho, junto com as exportações, as imagens e os arquivos |
+| POST | `/api/works/{id}/assets` | Envia uma imagem (`multipart/form-data`, campo `file`). Aceita só PNG ou JPEG, detectados pelo conteúdo e não pelo nome. O `id` devolvido é o `assetId` da figura |
+| GET | `/api/works/{id}/assets` | Imagens do trabalho |
+| GET | `/api/assets/{id}` | Conteúdo da imagem |
 | POST | `/api/works/{id}/exports` | Pede uma exportação `{ format: "docx" \| "pdf" }`. Responde 202 com o job, ou 400 com os dados que faltam |
 | GET | `/api/works/{id}/exports` | Últimas exportações do trabalho |
 | GET | `/api/exports/{id}` | Status do job (`queued`, `running`, `succeeded`, `failed`, `expired`) e avisos |
@@ -116,7 +119,7 @@ O modelo de documento está descrito em [docs/document-model.md](docs/document-m
 
 A exportação roda em segundo plano:
 1. O `.docx` é gerado com Open XML a partir de um *snapshot* do documento.
-2. Para PDF, esse mesmo `.docx` é convertido pelo LibreOffice headless.
+2. Para PDF, esse mesmo `.docx` é convertido pelo LibreOffice headless, por um script UNO que **atualiza o sumário e as listas** antes de exportar (ADR 0003).
 3. O front acompanha o status por polling.
 
 Os detalhes estão no [ADR 0007](docs/adr/0007-export-pipeline.md), e as regras de formatação aplicadas em [docs/abnt-rules.md](docs/abnt-rules.md).
@@ -128,6 +131,9 @@ Os detalhes estão no [ADR 0007](docs/adr/0007-export-pipeline.md), e as regras 
 | `Export:CleanupIntervalMinutes` | 30 | Intervalo da limpeza dos arquivos vencidos |
 | `Storage:Root` | `data/exports` | Pasta dos arquivos (em Docker, o volume `/data/exports`) |
 | `LibreOffice:SofficePath` | (auto) | Caminho do `soffice` |
+| `LibreOffice:PythonPath` | (auto) | Python com o módulo `uno`: no Windows e no macOS, o que vem com o LibreOffice; no Linux, o `python3` |
+| `Assets:MaxBytes` | 10 MiB | Tamanho máximo de cada imagem |
+| `Assets:MaxDimensionPixels` | 10000 | Largura e altura máximas de cada imagem |
 | `LibreOffice:TimeoutSeconds` | 120 | Tempo máximo de cada conversão |
 
 ## Banco e migrations
