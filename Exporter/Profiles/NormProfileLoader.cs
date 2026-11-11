@@ -66,6 +66,13 @@ public static class NormProfileLoader
         Check(p.Body.FirstLineIndentCm is >= 0 and <= 5, "body.firstLineIndentCm must be 0..5");
         Check(p.LongQuote.LeftIndentCm is >= 0 and <= 10, "longQuote.leftIndentCm must be 0..10");
         Check(p.PageNumbering.FontSizePt is >= 6 and <= 24, "pageNumbering.fontSizePt must be 6..24");
+        Check(p.References.LineSpacing is >= 1 and <= 3, "references.lineSpacing must be 1..3");
+        Check(p.References.SpaceAfterPt is >= 0 and <= 48, "references.spaceAfterPt must be 0..48");
+        Check(!string.IsNullOrWhiteSpace(p.Captions.FigureLabel) && !string.IsNullOrWhiteSpace(p.Captions.TableLabel),
+            "captions labels are required");
+        Check(p.Captions.FigureLabel != p.Captions.TableLabel, "captions.figureLabel and tableLabel must differ");
+        Check(p.Captions.FigureLabel.All(char.IsLetter) && p.Captions.TableLabel.All(char.IsLetter),
+            "captions labels must be single words (they name the SEQ fields)");
 
         var levels = p.Headings.Levels.Select(l => l.Level).ToList();
         Check(levels.SequenceEqual(Enumerable.Range(1, p.MaxSectionDepth)),

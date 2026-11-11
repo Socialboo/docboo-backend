@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Domain.Assets;
 using Domain.Documents;
 using Exporter.Profiles;
 
@@ -16,8 +17,9 @@ public sealed record DocxExportResult(byte[] Content, IReadOnlyList<string> Warn
 /// </summary>
 public sealed class DocxDocumentExporter(INormProfileStore profiles)
 {
-    public DocxExportResult Export(DocumentModel document)
+    public DocxExportResult Export(DocumentModel document, IReadOnlyDictionary<string, ImageData>? images = null)
     {
+        images ??= new Dictionary<string, ImageData>();
         var profile = profiles.GetRequired(document.ProfileId);
         var fontFamily = profile.ResolveFontFamily(document.ProfileOverrides);
         var warnings = new ExportWarnings();
@@ -31,9 +33,10 @@ public sealed class DocxDocumentExporter(INormProfileStore profiles)
 
             var pageNumberReference = PageNumberPart(main, profile);
             var numbering = new NumberingBuilder(profile);
-            var body = new BodyWriter(document, profile, numbering, warnings).Write(pageNumberReference);
-            main.Document = new Document(body);
+            var writer = new BodyWriter(main, document, profile, numbering, warnings, images);
+            main.Document = new Document(writer.Write(pageNumberReference));
             main.AddNewPart<NumberingDefinitionsPart>().Numbering = numbering.Build();
+            main.AddNewPart<FootnotesPart>().Footnotes = Footnotes(writer.Footnotes);
 
             package.PackageProperties.Title = document.Metadata.Title;
             package.PackageProperties.Creator = string.Join("; ", document.Metadata.Authors);
@@ -68,12 +71,32 @@ public sealed class DocxDocumentExporter(INormProfileStore profiles)
         return () => new FooterReference { Type = HeaderFooterValues.Default, Id = footerId };
     }
 
+    /// <summary>footnotes.xml: the two required separator footnotes (ids -1 and 0) followed by the content.</summary>
+    private static Footnotes Footnotes(IReadOnlyList<Footnote> footnotes)
+    {
+        var part = new Footnotes(
+            new Footnote(new Paragraph(
+                new ParagraphProperties(new SpacingBetweenLines { After = "0", Line = "240", LineRule = LineSpacingRuleValues.Auto }),
+                new Run(new SeparatorMark()))) { Type = FootnoteEndnoteValues.Separator, Id = -1 },
+            new Footnote(new Paragraph(
+                new ParagraphProperties(new SpacingBetweenLines { After = "0", Line = "240", LineRule = LineSpacingRuleValues.Auto }),
+                new Run(new ContinuationSeparatorMark()))) { Type = FootnoteEndnoteValues.ContinuationSeparator, Id = 0 });
+        foreach (var footnote in footnotes) part.Append(footnote);
+        return part;
+    }
+
     private static Settings Settings(NormProfile profile) => new(
         new Zoom { Percent = "100" },
         new DefaultTabStop { Val = (short)Units.CmToTwips(1.25) },
         new CharacterSpacingControl { Val = CharacterSpacingValues.DoNotCompress },
+        // Word refreshes the table of contents and lists (page numbers) when the file is opened.
+        new UpdateFieldsOnOpen { Val = true },
+        new FootnoteDocumentWideProperties(new FootnoteSpecialReference { Id = -1 }, new FootnoteSpecialReference { Id = 0 }),
         // Word 2013+ layout; avoids "compatibility mode" when the student opens the file.
-        new Compatibility(new CompatibilitySetting
+        new Compatibility(
+            // Justified lines ending in a manual line break are not stretched word by word.
+            new DoNotExpandShiftReturn(),
+            new CompatibilitySetting
         {
             Name = CompatSettingNameValues.CompatibilityMode,
             Uri = "http://schemas.microsoft.com/office/word",

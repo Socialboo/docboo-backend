@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <None Include="..\..\docs\samples\golden-tcc.json" Link="Samples\golden-tcc.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\docs\samples\assets\fluxo-exportacao.png" Link="Samples\fluxo-exportacao.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using Application.Assets;
 using Application.Documents;
 using Application.Exports;
 using Application.Works;
@@ -16,6 +17,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddOptions<ExportOptions>();
         services.AddScoped<ExportService>();
         services.AddScoped<ExportJobProcessor>();
+        services.AddOptions<AssetOptions>();
+        services.AddScoped<AssetService>();
         return services;
     }
 }

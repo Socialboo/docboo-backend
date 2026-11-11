@@ -30,6 +30,8 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Exports: Open XML + LibreOffice behind application ports, disk storage, in-process queue.
         services.AddScoped<IExportJobRepository, ExportJobRepository>();
+        services.AddScoped<Application.Assets.IAssetRepository, AssetRepository>();
+        services.AddOptions<Application.Assets.AssetOptions>().Bind(configuration.GetSection(Application.Assets.AssetOptions.SectionName));
         services.AddOptions<ExportOptions>().Bind(configuration.GetSection(ExportOptions.SectionName));
         services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName));
         services.AddOptions<LibreOfficeOptions>().Bind(configuration.GetSection(LibreOfficeOptions.SectionName));

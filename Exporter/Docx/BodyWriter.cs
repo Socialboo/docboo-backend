@@ -1,7 +1,10 @@
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Domain.Assets;
 using Domain.Documents;
 using Exporter.Profiles;
+using Exporter.References;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 
 namespace Exporter.Docx;
@@ -26,36 +29,36 @@ internal sealed class BodyWriter
 
     private readonly DocumentModel _doc;
     private readonly NormProfile _profile;
-    private readonly NumberingBuilder _numbering;
-    private readonly ExportWarnings _warnings;
+    private readonly ReferenceCatalog _references;
+    private readonly ContentWriter _content;
+    private readonly List<IndexEntry> _toc = [];
+    private readonly int[] _headingCounters;
 
-    public BodyWriter(DocumentModel doc, NormProfile profile, NumberingBuilder numbering, ExportWarnings warnings)
+    public BodyWriter(MainDocumentPart main, DocumentModel doc, NormProfile profile, NumberingBuilder numbering,
+        ExportWarnings warnings, IReadOnlyDictionary<string, ImageData> images)
     {
         _doc = doc;
         _profile = profile;
-        _numbering = numbering;
-        _warnings = warnings;
+        _references = new ReferenceCatalog(doc.References);
+        _content = new ContentWriter(main, profile, numbering, warnings, images, _references);
+        _headingCounters = new int[profile.MaxSectionDepth];
     }
+
+    public IReadOnlyList<Footnote> Footnotes => _content.Footnotes;
 
     /// <param name="pageNumberReference">Header or footer reference that prints the page number.</param>
     public Body Write(Func<OpenXmlElement> pageNumberReference)
     {
-        var sections = new List<Section>();
+        // The textual part is written first: it numbers headings, figures and tables, which the
+        // pre-textual table of contents and lists are pre-filled from.
+        var textual = Textual();
         var pre = _doc.PreTextual;
 
-        if (pre.Cover.Enabled)
-            sections.Add(Cover());
-        if (pre.TitlePage.Enabled)
-            sections.Add(TitlePage());
-        if (pre.AbstractPt.Enabled || pre.AbstractEn.Enabled)
-            sections.Add(Abstracts());
-        sections.Add(Textual());
-
-        _warnings.Add("toc");
-        if (pre.Lists.Figures || pre.Lists.Tables) _warnings.Add("lists");
-        if (_doc.References.Count > 0) _warnings.Add("references");
-        foreach (var _ in _doc.PostTextual.Appendices) _warnings.Add("appendices");
-        foreach (var _ in _doc.PostTextual.Annexes) _warnings.Add("annexes");
+        var sections = new List<Section>();
+        if (pre.Cover.Enabled) sections.Add(Cover());
+        if (pre.TitlePage.Enabled) sections.Add(TitlePage());
+        sections.Add(PreTextual());
+        sections.Add(textual);
 
         var countStart = CountStartIndex(sections);
         var body = new Body();
@@ -68,7 +71,6 @@ internal sealed class BodyWriter
                 _ => i >= countStart,
             };
             var sectPr = SectionProperties(restartNumbering: i == countStart, showNumber ? pageNumberReference() : null);
-            var isLast = i == sections.Count - 1;
 
             var content = section.Content;
             if (section.FullPage || content.Count == 0 || content[^1] is not Paragraph)
@@ -76,7 +78,7 @@ internal sealed class BodyWriter
 
             foreach (var element in content) body.Append(element);
 
-            if (isLast)
+            if (i == sections.Count - 1)
             {
                 body.Append(sectPr);
             }
@@ -96,7 +98,7 @@ internal sealed class BodyWriter
         return sections.FindIndex(s => s.Part != Part.Cover);
     }
 
-    // ---------- pre-textual ----------
+    // ---------- cover and title page ----------
 
     private Section Cover()
     {
@@ -134,42 +136,6 @@ internal sealed class BodyWriter
             (0.25, TableVerticalAlignmentValues.Center, [TitleParagraph()]),
             (0.35, TableVerticalAlignmentValues.Center, nature),
             (0.25, TableVerticalAlignmentValues.Bottom, CityAndYear())));
-        return section;
-    }
-
-    private Section Abstracts()
-    {
-        var section = new Section(Part.PreTextual);
-        var rules = _profile.PreTextual;
-        var first = true;
-        foreach (var (element, title, label) in new[]
-                 {
-                     (_doc.PreTextual.AbstractPt, rules.AbstractTitlePt, rules.KeywordsLabelPt),
-                     (_doc.PreTextual.AbstractEn, rules.AbstractTitleForeign, rules.KeywordsLabelForeign),
-                 })
-        {
-            if (!element.Enabled) continue;
-
-            var titleParagraph = Para(StyleIds.PreTextualTitle, Text(title));
-            if (!first) titleParagraph.ParagraphProperties!.InsertAfter(new PageBreakBefore(), titleParagraph.ParagraphProperties.ParagraphStyleId);
-            section.Content.Add(titleParagraph);
-            first = false;
-
-            foreach (var line in element.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                section.Content.Add(Para(StyleIds.AbstractText, Text(line)));
-
-            if (element.Keywords.Count > 0)
-            {
-                var keywords = Para(StyleIds.AbstractText,
-                    Text(label, bold: true),
-                    Text(" " + string.Join("; ", element.Keywords) + "."));
-                keywords.ParagraphProperties!.Append(new SpacingBetweenLines
-                {
-                    Before = Units.PtToTwips(_profile.Body.FontSizePt * _profile.Body.LineSpacing).ToString(),
-                });
-                section.Content.Add(keywords);
-            }
-        }
         return section;
     }
 
@@ -232,79 +198,139 @@ internal sealed class BodyWriter
         return table;
     }
 
-    // ---------- textual ----------
+    // ---------- pre-textual: abstracts, lists, table of contents ----------
+
+    private Section PreTextual()
+    {
+        var section = new Section(Part.PreTextual);
+        var rules = _profile.PreTextual;
+        var pre = _doc.PreTextual;
+
+        void Title(string text)
+        {
+            var title = Para(StyleIds.PreTextualTitle, Text(text));
+            // Every pre-textual element starts on its own page (the section break covers the first one).
+            if (section.Content.Count > 0)
+                title.ParagraphProperties!.InsertAfter(new PageBreakBefore(), title.ParagraphProperties.ParagraphStyleId);
+            section.Content.Add(title);
+        }
+
+        foreach (var (element, title, label) in new[]
+                 {
+                     (pre.AbstractPt, rules.AbstractTitlePt, rules.KeywordsLabelPt),
+                     (pre.AbstractEn, rules.AbstractTitleForeign, rules.KeywordsLabelForeign),
+                 })
+        {
+            if (!element.Enabled) continue;
+            Title(title);
+            foreach (var line in element.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                section.Content.Add(Para(StyleIds.AbstractText, Text(line)));
+
+            if (element.Keywords.Count > 0)
+            {
+                var keywords = Para(StyleIds.AbstractText, Text(label, bold: true), Text(" " + string.Join("; ", element.Keywords) + "."));
+                keywords.ParagraphProperties!.Append(new SpacingBetweenLines
+                {
+                    Before = Units.PtToTwips(_profile.Body.FontSizePt * _profile.Body.LineSpacing).ToString(),
+                });
+                section.Content.Add(keywords);
+            }
+        }
+
+        if (pre.Lists.Figures && _content.Figures.Count > 0)
+        {
+            Title(rules.ListOfFiguresTitle);
+            AddIndex(section.Content, _content.Figures, _ => StyleIds.TableOfFigures, Fields.ListOf(_profile.Captions.FigureLabel));
+        }
+        if (pre.Lists.Tables && _content.Tables.Count > 0)
+        {
+            Title(rules.ListOfTablesTitle);
+            AddIndex(section.Content, _content.Tables, _ => StyleIds.TableOfFigures, Fields.ListOf(_profile.Captions.TableLabel));
+        }
+
+        Title(rules.TocTitle);
+        AddIndex(section.Content, _toc, level => StyleIds.Toc(level), Fields.TableOfContents(_profile.MaxSectionDepth));
+        return section;
+    }
+
+    /// <summary>
+    /// Index (TOC or list) as a field pre-filled with its entries. Page numbers are left for the field
+    /// update: LibreOffice fills them while converting to PDF; Word on opening (updateFields).
+    /// </summary>
+    private static void AddIndex(List<OpenXmlElement> target, IReadOnlyList<IndexEntry> entries, Func<int, string> style, string instruction)
+    {
+        var paragraphs = entries.Select(e => Para(style(e.Level), Text(e.Text), new Run(new TabChar()))).ToList();
+        if (paragraphs.Count == 0) paragraphs.Add(Para(style(1)));
+        Fields.WrapInField(paragraphs, instruction);
+        target.AddRange(paragraphs);
+    }
+
+    // ---------- textual and post-textual ----------
 
     private Section Textual()
     {
         var section = new Section(Part.Textual);
         foreach (var s in _doc.Textual.Sections) WriteSection(section.Content, s, depth: 1);
+        WritePostTextual(section.Content);
         return section;
     }
 
     private void WriteSection(List<OpenXmlElement> target, Domain.Documents.Section section, int depth)
     {
+        _headingCounters[depth - 1]++;
+        for (var i = depth; i < _headingCounters.Length; i++) _headingCounters[i] = 0;
+        var number = _profile.Headings.Numbered ? string.Join(".", _headingCounters.Take(depth)) + " " : "";
+        _toc.Add(new IndexEntry(depth, number + section.Title));
+
         target.Add(Para(StyleIds.Heading(depth), Text(section.Title)));
-        WriteBlocks(target, section.Blocks);
+        _content.WriteBlocks(target, section.Blocks);
         foreach (var child in section.Children) WriteSection(target, child, depth + 1);
     }
 
-    private void WriteBlocks(List<OpenXmlElement> target, IReadOnlyList<Block> blocks)
+    private void WritePostTextual(List<OpenXmlElement> target)
     {
-        foreach (var block in blocks)
+        var post = _profile.PostTextual;
+
+        if (_references.Ordered.Count > 0)
         {
-            switch (block)
+            PostTitle(target, post.ReferencesTitle);
+            var formatter = new ReferenceFormatter(_references);
+            foreach (var item in _references.Ordered)
             {
-                case ParagraphBlock p:
-                    target.Add(Para(null, Inlines(p.Content)));
-                    break;
-                case LongQuoteBlock q:
-                    target.Add(Para(StyleIds.Quote, Inlines(q.Content)));
-                    break;
-                case ListBlock list:
-                    var numId = list.Ordered ? _numbering.NewOrderedList() : _numbering.BulletListId;
-                    foreach (var item in list.Items)
-                    {
-                        var paragraph = Para(StyleIds.ListParagraph, Inlines(item.Content));
-                        paragraph.ParagraphProperties!.InsertAfter(
-                            new NumberingProperties(new NumberingLevelReference { Val = 0 }, new NumberingId { Val = numId }),
-                            paragraph.ParagraphProperties.ParagraphStyleId);
-                        target.Add(paragraph);
-                    }
-                    break;
-                case FigureBlock:
-                    _warnings.Add("figure");
-                    break;
-                case TableBlock:
-                    _warnings.Add("table");
-                    break;
+                var segments = formatter.Format(item);
+                var runs = segments.Select((seg, i) => (OpenXmlElement)Text(i == segments.Count - 1 ? seg.Text.TrimEnd() : seg.Text, bold: seg.Bold));
+                target.Add(Para(StyleIds.Bibliography, [.. runs]));
+            }
+        }
+
+        foreach (var (attachments, label) in new[] { (_doc.PostTextual.Appendices, post.AppendixLabel), (_doc.PostTextual.Annexes, post.AnnexLabel) })
+        {
+            for (var i = 0; i < attachments.Count; i++)
+            {
+                PostTitle(target, $"{label} {Letters(i)}{post.LabelSeparator}{attachments[i].Title}");
+                _content.WriteBlocks(target, attachments[i].Blocks);
             }
         }
     }
 
-    private OpenXmlElement[] Inlines(IReadOnlyList<Inline> inlines)
+    private void PostTitle(List<OpenXmlElement> target, string text)
     {
-        var runs = new List<OpenXmlElement>();
-        foreach (var inline in inlines)
+        _toc.Add(new IndexEntry(1, text));
+        target.Add(Para(StyleIds.PostTextualTitle, Text(text)));
+    }
+
+    /// <summary>A, B, ..., Z, AA, AB, ...</summary>
+    public static string Letters(int index)
+    {
+        var result = "";
+        index++;
+        while (index > 0)
         {
-            switch (inline)
-            {
-                case TextInline t:
-                    runs.Add(Text(t.Text, t.Marks));
-                    break;
-                case HardBreakInline:
-                    runs.Add(new Run(new Break()));
-                    break;
-                case CitationInline c:
-                    _warnings.Add("citation");
-                    var locator = string.IsNullOrEmpty(c.Locator) ? "" : $", {c.Locator}";
-                    runs.Add(Text($"({string.Join("; ", c.RefIds)}{locator})"));
-                    break;
-                case FootnoteInline:
-                    _warnings.Add("footnote");
-                    break;
-            }
+            index--;
+            result = (char)('A' + index % 26) + result;
+            index /= 26;
         }
-        return [.. runs];
+        return result;
     }
 
     // ---------- primitives ----------
@@ -334,16 +360,17 @@ internal sealed class BodyWriter
         return sectPr;
     }
 
-    private static Paragraph Para(string? styleId, params OpenXmlElement[] runs)
+    internal static Paragraph Para(string? styleId, params OpenXmlElement[] runs)
     {
         var paragraph = new Paragraph();
-        if (styleId is not null) paragraph.Append(new ParagraphProperties(new ParagraphStyleId { Val = styleId }));
-        else paragraph.Append(new ParagraphProperties());
+        paragraph.Append(styleId is not null
+            ? new ParagraphProperties(new ParagraphStyleId { Val = styleId })
+            : new ParagraphProperties());
         foreach (var run in runs) paragraph.Append(run);
         return paragraph;
     }
 
-    private static Run Text(string text, IReadOnlyList<TextMark> marks)
+    internal static Run Text(string text, IReadOnlyList<TextMark> marks)
     {
         var rPr = new RunProperties();
         if (marks.Contains(TextMark.Bold)) rPr.Append(new Bold(), new BoldComplexScript());
@@ -354,11 +381,11 @@ internal sealed class BodyWriter
 
         var run = new Run();
         if (rPr.HasChildren) run.Append(rPr);
-        run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
+        run.Append(new W.Text(text) { Space = SpaceProcessingModeValues.Preserve });
         return run;
     }
 
-    private static Run Text(string text, bool bold = false, bool caps = false)
+    internal static Run Text(string text, bool bold = false, bool caps = false)
     {
         var run = new Run();
         if (bold || caps)
@@ -368,7 +395,7 @@ internal sealed class BodyWriter
             if (caps) rPr.Append(new Caps());
             run.Append(rPr);
         }
-        run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
+        run.Append(new W.Text(text) { Space = SpaceProcessingModeValues.Preserve });
         return run;
     }
 }

@@ -1,3 +1,4 @@
+using Domain.Assets;
 using Domain.Documents;
 using Domain.Exports;
 
@@ -10,7 +11,9 @@ public sealed record GeneratedDocument(byte[] Content, IReadOnlyList<string> War
 /// <summary>Generates the .docx (single source of truth) from the document model.</summary>
 public interface IDocumentGenerator
 {
-    GeneratedDocument GenerateDocx(DocumentModel document);
+    /// <param name="document">Document snapshot to render.</param>
+    /// <param name="images">Figure images by <c>assetId</c>.</param>
+    GeneratedDocument GenerateDocx(DocumentModel document, IReadOnlyDictionary<string, ImageData> images);
 }
 
 /// <summary>Converts a .docx to PDF (LibreOffice in the default implementation).</summary>

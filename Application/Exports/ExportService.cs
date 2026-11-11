@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 using Application.Abstractions;
+using Application.Assets;
+using Application.Documents;
 using Application.Common;
 using Domain.Exports;
 using DTOs.Exports;
@@ -14,6 +16,7 @@ public sealed class ExportService(
     IExportQueue queue,
     IFileStorage storage,
     IPdfConverter pdfConverter,
+    IAssetRepository assets,
     ICurrentUser currentUser,
     TimeProvider clock)
 {
@@ -25,6 +28,7 @@ public sealed class ExportService(
         if (work is null) return new ServiceError.NotFound();
 
         var errors = ExportReadinessValidator.Validate(work.Document).ToList();
+        errors.AddRange(await MissingImagesAsync(work.Id, work.Document, ct));
         if (request.Format == ExportFormat.Pdf && !pdfConverter.IsAvailable)
             errors.Add(new ValidationError("format", "export.pdfUnavailable", "A geração de PDF não está disponível neste servidor (LibreOffice ausente)."));
         if (errors.Count > 0) return new ServiceError.Invalid(errors);
@@ -35,6 +39,21 @@ public sealed class ExportService(
         await jobs.SaveChangesAsync(ct);
         await queue.EnqueueAsync(job.Id, ct);
         return ToResponse(job);
+    }
+
+    private async Task<IEnumerable<ValidationError>> MissingImagesAsync(Guid workId, Domain.Documents.DocumentModel doc, CancellationToken ct)
+    {
+        var figures = DocumentWalker.Figures(doc).ToList();
+        if (figures.Count == 0) return [];
+
+        var ids = figures.Select(f => Guid.TryParseExact(f.Figure.AssetId, "N", out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty).Distinct().ToList();
+        var existing = (await assets.FindManyAsync(workId, ids, ct)).Select(a => a.DocumentId).ToHashSet(StringComparer.Ordinal);
+
+        return figures
+            .Where(f => !existing.Contains(f.Figure.AssetId))
+            .Select(f => new ValidationError($"{f.Path}.assetId", "export.imageMissing", "A imagem desta figura não foi enviada."))
+            .ToList();
     }
 
     public async Task<Result<ExportJobResponse>> GetAsync(Guid jobId, CancellationToken ct)

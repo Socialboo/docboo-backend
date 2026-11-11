@@ -18,7 +18,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Pdf\convert_to_pdf.py" LogicalName="Exporter.Pdf.convert_to_pdf.py" />
     <EmbeddedResource Include="Profiles\*.json" LogicalName="Exporter.Profiles.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Exporter.Tests" />
   </ItemGroup>
 
 </Project>

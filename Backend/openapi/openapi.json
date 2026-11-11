@@ -6,6 +6,208 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/works/{workId}/assets": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Uploads an image for the work. Use the returned `id` as the figure's `assetId`.",
+        "operationId": "UploadAsset",
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Lists the images of a work.",
+        "operationId": "ListAssets",
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Returns the image content.",
+        "operationId": "GetAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/works/{workId}/exports": {
       "post": {
         "tags": [
@@ -666,6 +868,65 @@
           }
         },
         "additionalProperties": false
+      },
+      "AssetResponse": {
+        "required": [
+          "id",
+          "workId",
+          "contentType",
+          "width",
+          "height",
+          "sizeBytes",
+          "originalName",
+          "url",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Use as `assetId` in figure blocks."
+          },
+          "workId": {
+            "type": "string",
+            "description": "Work the image belongs to.",
+            "format": "uuid"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "image/png or image/jpeg (detected from the content)."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Width in pixels.",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "description": "Height in pixels.",
+            "format": "int32"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "description": "File size.",
+            "format": "int64"
+          },
+          "originalName": {
+            "type": "string",
+            "description": "Uploaded file name (display only)."
+          },
+          "url": {
+            "type": "string",
+            "description": "Relative URL of the image."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Upload time.",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "An uploaded image."
       },
       "Attachment": {
         "required": [
@@ -1443,6 +1704,10 @@
         "additionalProperties": false,
         "description": "Liveness/readiness snapshot returned by `GET /api/health`."
       },
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
+      },
       "Inline": {
         "required": [
           "type"
@@ -2020,6 +2285,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Assets"
+    },
     {
       "name": "Exports"
     },

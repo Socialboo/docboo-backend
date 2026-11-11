@@ -32,5 +32,6 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Storage:Root", StorageRoot);
+        builder.UseSetting("Assets:MaxBytes", "200000"); // small limit so the oversize test stays fast
     }
 }

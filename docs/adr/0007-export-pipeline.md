@@ -21,7 +21,8 @@ GET /api/exports/{id}/file     ← 409 enquanto não termina; 410 depois de expi
 ```
 
 - **Snapshot:** o job guarda o documento do momento do pedido. Edições feitas depois não alteram uma exportação já pedida (há teste de integração para isso).
-- **Fonte única da verdade:** o PDF é sempre a conversão do `.docx` gerado; não existe um segundo renderizador.
+- **Fonte única da verdade:** o PDF é sempre a conversão do `.docx` gerado; não existe um segundo renderizador. A conversão roda um script UNO que atualiza o sumário e as listas antes de exportar (ADR 0003).
+- **Imagens:** as figuras referenciam imagens enviadas (`assets`), guardadas no mesmo `IFileStorage`. O processador carrega as imagens do *snapshot* antes de gerar o `.docx`.
 - **LibreOffice:**
   - perfil isolado por conversão (`-env:UserInstallation` em uma pasta temporária), o que permite rodar em paralelo;
   - timeout configurável, que encerra a árvore de processos;

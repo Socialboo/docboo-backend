@@ -33,7 +33,7 @@ DocumentModel
 | `paragraph` | `content: Inline[]` |
 | `longQuote` | `content: Inline[]`. A formatação (recuo de 4 cm, fonte 10) vem do perfil. |
 | `list` | `ordered`, `items: [{ content: Inline[] }]` |
-| `figure` | `assetId`, `caption: Inline[]`, `source: Inline[]`, `widthPercent` (10–100) |
+| `figure` | `assetId` (id devolvido por `POST /api/works/{id}/assets`), `caption: Inline[]`, `source: Inline[]`, `widthPercent` (10–100) |
 | `table` | `title: Inline[]`, `source: Inline[]`, `rows: [{ header, cells: [{ content, colSpan, rowSpan }] }]` |
 
 ### Inlines (`type`)
@@ -81,6 +81,13 @@ Na validação estrutural, metadados vazios são aceitos. A completude para expo
   - campos curtos com até 500 caracteres;
   - até 20.000 blocos e 2.000 referências.
 - Limite do corpo da requisição de salvamento: 4 MiB. Acima disso, a resposta é HTTP 413.
+
+## Prontidão para exportar
+
+Um rascunho pode estar incompleto, mas a exportação exige alguns dados. Quando falta algo, a API responde 400 indicando o caminho de cada campo faltante:
+- os metadados impressos na capa e na folha de rosto: título, autor, cidade, ano, instituição, natureza e orientador;
+- o texto e as palavras-chave de cada resumo ativado;
+- a imagem de cada figura já enviada para o trabalho (`textual.sections[i].blocks[j].assetId`).
 
 ## Evolução do schema
 

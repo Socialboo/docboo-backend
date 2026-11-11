@@ -1,4 +1,5 @@
 using Application.Exports;
+using Domain.Assets;
 using Domain.Documents;
 using Exporter.Docx;
 using Exporter.Pdf;
@@ -8,9 +9,9 @@ namespace Infrastructure.Exports;
 /// <summary>Application port → Open XML generator.</summary>
 public sealed class DocxGeneratorAdapter(DocxDocumentExporter exporter) : IDocumentGenerator
 {
-    public GeneratedDocument GenerateDocx(DocumentModel document)
+    public GeneratedDocument GenerateDocx(DocumentModel document, IReadOnlyDictionary<string, ImageData> images)
     {
-        var result = exporter.Export(document);
+        var result = exporter.Export(document, images);
         return new GeneratedDocument(result.Content, result.Warnings);
     }
 }
