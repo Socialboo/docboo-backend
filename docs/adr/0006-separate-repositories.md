@@ -9,7 +9,7 @@ O front e o back passaram a viver em repositórios próprios, `Socialboo/docboo-
 ## Decisão
 - **Cada repositório é autocontido:** tem seu próprio `docker-compose.yml`, `docker-compose.dev.yml`, `.env.example`, README e `docs/`.
 - **Backend** (este repositório):
-  - O compose sobe `db` (PostgreSQL 18), `pgadmin` (pgAdmin 4) e `api`.
+  - O compose sobe `db` (`postgres:latest`), `pgadmin` (`dpage/pgadmin4:latest`) e `api`. Todas as imagens dos dois repositórios usam a tag `latest`.
   - Postgres e pgAdmin ficam publicados apenas em `127.0.0.1`.
   - A API fica publicada em `5248`.
 - **Frontend:**

@@ -2,9 +2,10 @@ name: docboo-backend
 
 services:
   db:
-    # Newest PostgreSQL major (Debian image). Pinned to the major on purpose: moving to a new major
-    # needs a dump/restore or pg_upgrade of the data volume, so it must be a deliberate change.
-    image: postgres:18
+    # Always the latest PostgreSQL (Debian). Caution: when `latest` moves to a new major version,
+    # the server starts with an EMPTY cluster in a new /var/lib/postgresql/<major> directory; the old
+    # data stays in the previous directory until migrated (pg_dump/restore or pg_upgrade).
+    image: postgres:latest
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-docboo}
@@ -23,7 +24,7 @@ services:
       retries: 10
 
   pgadmin:
-    image: dpage/pgadmin4:9
+    image: dpage/pgadmin4:latest
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}

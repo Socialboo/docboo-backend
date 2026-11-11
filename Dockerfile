@@ -5,7 +5,7 @@
 ARG LO_PACKAGES="libreoffice-writer-nogui python3-uno fonts-liberation fonts-liberation2 fontconfig curl"
 
 # ---------- build ----------
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:latest AS build
 WORKDIR /src
 COPY Directory.Build.props docboo-backend.slnx ./
 COPY Backend/Backend.csproj Backend/
@@ -20,7 +20,7 @@ RUN dotnet publish Backend/Backend.csproj -c Release -o /app --no-restore \
       -p:OpenApiGenerateDocuments=false -p:UseAppHost=false
 
 # ---------- dev (dotnet watch + LibreOffice, used by docker-compose.dev.yml) ----------
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:latest AS dev
 ARG LO_PACKAGES
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update \
  && apt-get install -y --no-install-recommends ${LO_PACKAGES} \
@@ -34,7 +34,7 @@ EXPOSE 8080
 CMD ["dotnet", "watch", "--project", "Backend/Backend.csproj", "run", "--no-launch-profile"]
 
 # ---------- runtime ----------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:latest AS final
 ARG LO_PACKAGES
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update \
  && apt-get install -y --no-install-recommends ${LO_PACKAGES} \

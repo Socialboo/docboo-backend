@@ -4,7 +4,7 @@ API do **Docboo**, o formatador de trabalhos acadêmicos (MVP: ABNT para TCC/mon
 
 **Stack:**
 - ASP.NET Core (.NET 10) com Controllers;
-- EF Core + PostgreSQL 18;
+- EF Core + PostgreSQL;
 - Open XML SDK para gerar o `.docx`;
 - LibreOffice headless para converter em PDF;
 - OpenAPI com Swagger UI e Scalar.
@@ -47,7 +47,13 @@ Os três serviços (`db`, `pgadmin`, `api`) devem ficar `healthy`. Depois disso:
 | http://localhost:5248/swagger | Swagger UI |
 | http://localhost:5248/openapi/v1.json | Documento OpenAPI |
 | http://localhost:5050 | pgAdmin |
-| `127.0.0.1:5432` | PostgreSQL 18 |
+| `127.0.0.1:5432` | PostgreSQL |
+
+### Imagens `latest`
+
+Todas as imagens usam a tag `latest` (`postgres`, `dpage/pgadmin4`, `mcr.microsoft.com/dotnet/sdk` e `aspnet`). Para atualizar, rode `docker compose pull`.
+
+> **Atenção:** quando `postgres:latest` mudar de versão principal (por exemplo, 18 → 19), o servidor sobe com um banco **vazio** em um novo diretório do volume. Antes de atualizar, faça `pg_dump` dos dados e restaure depois.
 
 ### pgAdmin
 
@@ -108,7 +114,7 @@ Para desativar a migração automática na inicialização, use `Database__Migra
 dotnet test docboo-backend.slnx
 ```
 
-- `IntegrationTests` sobe um PostgreSQL 18 descartável com Testcontainers, por isso **precisa do Docker rodando**.
+- `IntegrationTests` sobe um PostgreSQL descartável (`postgres:latest`) com Testcontainers, por isso **precisa do Docker rodando**. O container é removido ao final; a imagem `testcontainers/ryuk`, que o Testcontainers usa para limpeza, é baixada de novo a cada execução.
 - O documento de exemplo "golden" fica em `docs/samples/golden-tcc.json`.
 
 ## Documentação
