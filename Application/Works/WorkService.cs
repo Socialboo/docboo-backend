@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Common;
 using Application.Documents;
+using Application.Exports;
 using Domain.Documents;
 using Domain.Profiles;
 using Domain.Works;
@@ -14,6 +15,8 @@ public sealed class WorkService(
     ICurrentUser currentUser,
     INormProfileCatalog profiles,
     DocumentValidator validator,
+    IExportJobRepository exportJobs,
+    IFileStorage storage,
     TimeProvider clock)
 {
     public async Task<IReadOnlyList<WorkSummaryResponse>> ListAsync(CancellationToken ct)
@@ -68,8 +71,13 @@ public sealed class WorkService(
     {
         var work = await repository.FindAsync(currentUser.UserId, id, ct);
         if (work is null) return new ServiceError.NotFound();
+
+        // Export jobs are removed by cascade; their files must be removed explicitly.
+        var jobs = await exportJobs.ListByWorkAsync(currentUser.UserId, id, int.MaxValue, ct);
         repository.Remove(work);
         await repository.SaveChangesAsync(ct);
+        foreach (var key in jobs.Select(j => j.FileKey).OfType<string>())
+            await storage.DeleteAsync(key, ct);
         return Result<bool>.Success(true);
     }
 

@@ -22,6 +22,99 @@ namespace Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Exports.ExportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document_snapshot");
+
+                    b.Property<int>("DocumentVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_version");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FileKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("file_key");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("file_name");
+
+                    b.Property<long?>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("format");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Warnings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("warnings");
+
+                    b.Property<Guid>("WorkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("work_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkId");
+
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("ix_export_jobs_status_expires");
+
+                    b.HasIndex("UserId", "WorkId", "CreatedAt")
+                        .HasDatabaseName("ix_export_jobs_user_work_created");
+
+                    b.ToTable("export_jobs", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Works.Work", b =>
                 {
                     b.Property<Guid>("Id")
@@ -68,6 +161,15 @@ namespace Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_works_user_id_updated_at");
 
                     b.ToTable("works", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Exports.ExportJob", b =>
+                {
+                    b.HasOne("Domain.Works.Work", null)
+                        .WithMany()
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

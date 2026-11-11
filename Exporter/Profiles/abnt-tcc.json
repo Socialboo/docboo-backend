@@ -2,5 +2,73 @@
   "id": "abnt-tcc",
   "name": "ABNT — TCC / Monografia",
   "description": "Trabalhos acadêmicos conforme as regras de formatação da ABNT (A4, margens 3/2 cm, fonte 12, espaçamento 1,5).",
-  "maxSectionDepth": 5
+  "maxSectionDepth": 5,
+  "language": "pt-BR",
+
+  "page": {
+    "widthCm": 21.0,
+    "heightCm": 29.7,
+    "marginTopCm": 3.0,
+    "marginLeftCm": 3.0,
+    "marginBottomCm": 2.0,
+    "marginRightCm": 2.0,
+    "headerDistanceCm": 2.0,
+    "footerDistanceCm": 1.25
+  },
+
+  "fonts": {
+    "default": "timesNewRoman",
+    "families": {
+      "timesNewRoman": "Times New Roman",
+      "arial": "Arial"
+    }
+  },
+
+  "body": {
+    "fontSizePt": 12,
+    "lineSpacing": 1.5,
+    "firstLineIndentCm": 1.25,
+    "alignment": "justify"
+  },
+
+  "smallText": {
+    "fontSizePt": 10,
+    "lineSpacing": 1.0
+  },
+
+  "longQuote": {
+    "leftIndentCm": 4.0,
+    "fontSizePt": 10,
+    "lineSpacing": 1.0
+  },
+
+  "headings": {
+    "numbered": true,
+    "spaceBeforePt": 18,
+    "spaceAfterPt": 18,
+    "levels": [
+      { "level": 1, "bold": true, "italic": false, "allCaps": true, "pageBreakBefore": true },
+      { "level": 2, "bold": false, "italic": false, "allCaps": true, "pageBreakBefore": false },
+      { "level": 3, "bold": true, "italic": false, "allCaps": false, "pageBreakBefore": false },
+      { "level": 4, "bold": false, "italic": false, "allCaps": false, "pageBreakBefore": false },
+      { "level": 5, "bold": false, "italic": true, "allCaps": false, "pageBreakBefore": false }
+    ]
+  },
+
+  "pageNumbering": {
+    "countFrom": "titlePage",
+    "visibleFrom": "textual",
+    "position": "topRight",
+    "fontSizePt": 10
+  },
+
+  "preTextual": {
+    "natureIndentCm": 8.0,
+    "abstractTitlePt": "RESUMO",
+    "abstractTitleForeign": "ABSTRACT",
+    "keywordsLabelPt": "Palavras-chave:",
+    "keywordsLabelForeign": "Keywords:",
+    "advisorLabel": "Orientador:",
+    "coAdvisorLabel": "Coorientador:"
+  }
 }

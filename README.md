@@ -70,7 +70,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Desenvolvimento nativo
 
-Pré-requisitos: .NET SDK 10 e Docker (só para o Postgres).
+Pré-requisitos: .NET SDK 10, Docker (só para o Postgres) e, para exportar em PDF, o [LibreOffice](https://www.libreoffice.org/download/) instalado.
 
 ```bash
 docker compose up -d db pgadmin
@@ -81,6 +81,14 @@ dotnet run --project Backend --launch-profile http
 ```
 
 A API sobe em http://localhost:5248 e aplica as migrations na inicialização.
+
+- O `soffice` é localizado automaticamente:
+  - no Windows, em `C:\Program Files\LibreOffice\program\soffice.com`;
+  - no Linux, pelo `PATH`;
+  - no macOS, no `/Applications`.
+- Para usar outro caminho, defina `LibreOffice__SofficePath`.
+- Sem LibreOffice, `/health` mostra `libreoffice: Degraded`, e só a exportação em `.docx` fica disponível.
+- Os arquivos exportados ficam em `Backend/data/exports`, que é ignorado pelo git.
 
 ## Frontend
 
@@ -96,9 +104,31 @@ O [docboo-frontend](https://github.com/Socialboo/docboo-frontend) acessa esta AP
 | POST | `/api/works` | Cria um trabalho `{ profileId, title? }` com documento vazio |
 | GET | `/api/works/{id}` | Trabalho com o documento |
 | PUT | `/api/works/{id}/document` | Salva `{ version, document }`. Responde 409 se a versão estiver desatualizada, 400 com erros por caminho ou 413 acima de 4 MiB |
-| DELETE | `/api/works/{id}` | Remove o trabalho |
+| DELETE | `/api/works/{id}` | Remove o trabalho, junto com as exportações e os arquivos dele |
+| POST | `/api/works/{id}/exports` | Pede uma exportação `{ format: "docx" \| "pdf" }`. Responde 202 com o job, ou 400 com os dados que faltam |
+| GET | `/api/works/{id}/exports` | Últimas exportações do trabalho |
+| GET | `/api/exports/{id}` | Status do job (`queued`, `running`, `succeeded`, `failed`, `expired`) e avisos |
+| GET | `/api/exports/{id}/file` | Download. Responde 409 enquanto o job não termina e 410 depois que o arquivo expira |
 
 O modelo de documento está descrito em [docs/document-model.md](docs/document-model.md).
+
+### Exportação
+
+A exportação roda em segundo plano:
+1. O `.docx` é gerado com Open XML a partir de um *snapshot* do documento.
+2. Para PDF, esse mesmo `.docx` é convertido pelo LibreOffice headless.
+3. O front acompanha o status por polling.
+
+Os detalhes estão no [ADR 0007](docs/adr/0007-export-pipeline.md), e as regras de formatação aplicadas em [docs/abnt-rules.md](docs/abnt-rules.md).
+
+| Configuração | Padrão | O quê |
+| --- | --- | --- |
+| `Export:MaxConcurrency` | 2 | Exportações processadas ao mesmo tempo |
+| `Export:RetentionHours` | 24 | Tempo em que o arquivo fica disponível |
+| `Export:CleanupIntervalMinutes` | 30 | Intervalo da limpeza dos arquivos vencidos |
+| `Storage:Root` | `data/exports` | Pasta dos arquivos (em Docker, o volume `/data/exports`) |
+| `LibreOffice:SofficePath` | (auto) | Caminho do `soffice` |
+| `LibreOffice:TimeoutSeconds` | 120 | Tempo máximo de cada conversão |
 
 ## Banco e migrations
 
@@ -114,11 +144,13 @@ Para desativar a migração automática na inicialização, use `Database__Migra
 dotnet test docboo-backend.slnx
 ```
 
-- `IntegrationTests` sobe um PostgreSQL descartável (`postgres:latest`) com Testcontainers, por isso **precisa do Docker rodando**. O container é removido ao final; a imagem `testcontainers/ryuk`, que o Testcontainers usa para limpeza, é baixada de novo a cada execução.
+- `Exporter.Tests`: motor de normas, XML do `.docx` (incluindo validação de schema OpenXML) e o PDF real do documento "golden" (páginas, numeração, margens, fonte). Os testes de PDF são pulados se o LibreOffice não estiver instalado.
+- `IntegrationTests`: exportação de ponta a ponta pela API (fila, worker, armazenamento, expiração). Também sobe um PostgreSQL descartável (`postgres:latest`) com Testcontainers, por isso **precisa do Docker rodando**. O container é removido ao final; a imagem `testcontainers/ryuk`, que o Testcontainers usa para limpeza, é baixada de novo a cada execução.
 - O documento de exemplo "golden" fica em `docs/samples/golden-tcc.json`.
 
 ## Documentação
 
 - [docs/adr](docs/adr): decisões de arquitetura, incluindo a separação dos repositórios (ADR 0006).
 - [docs/document-model.md](docs/document-model.md): modelo de documento (schema v1).
-- [docs/abnt-rules.md](docs/abnt-rules.md): regras ABNT implementadas.
+- [docs/abnt-rules.md](docs/abnt-rules.md): regras ABNT implementadas e pendentes.
+- `tests/Exporter.Tests/bin/.../out/golden-tcc.{docx,pdf}`: `.docx` e PDF do documento "golden", gerados pelos testes para conferência visual.

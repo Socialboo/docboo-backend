@@ -6,6 +6,263 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/works/{workId}/exports": {
+      "post": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Queues an export of the work's current document.",
+        "description": "Returns 400 with the missing data (by path) when the work is not ready to be exported.",
+        "operationId": "CreateExport",
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Lists the most recent exports of a work (newest first).",
+        "operationId": "ListExports",
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExportJobResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExportJobResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExportJobResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports/{id}": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Status of an export job.",
+        "operationId": "GetExport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports/{id}/file": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Downloads the generated file.",
+        "description": "409 while the job is not finished (or failed); 410 after the file expired.",
+        "operationId": "DownloadExport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -639,6 +896,20 @@
           "narrative"
         ]
       },
+      "CreateExportRequest": {
+        "required": [
+          "format"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "description": "docx or pdf.",
+            "$ref": "#/components/schemas/ExportFormat"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Requests a new export of the work's current document."
+      },
       "CreateWorkRequest": {
         "required": [
           "profileId"
@@ -974,6 +1245,129 @@
         },
         "additionalProperties": false,
         "description": "Source of truth for an academic work (schema v1). Edited by the frontend, stored as JSONB,\nand consumed by the Exporter. Breaking changes require a new int DocumentModel.SchemaVersion\nand a migration step (see docs/document-model.md)."
+      },
+      "ExportFormat": {
+        "enum": [
+          "docx",
+          "pdf"
+        ]
+      },
+      "ExportJobResponse": {
+        "required": [
+          "id",
+          "workId",
+          "format",
+          "status",
+          "documentVersion",
+          "fileName",
+          "fileSize",
+          "error",
+          "warnings",
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "expiresAt",
+          "downloadUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Job id.",
+            "format": "uuid"
+          },
+          "workId": {
+            "type": "string",
+            "description": "Exported work.",
+            "format": "uuid"
+          },
+          "format": {
+            "description": "docx or pdf.",
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "status": {
+            "description": "queued, running, succeeded, failed or expired.",
+            "$ref": "#/components/schemas/ExportStatus"
+          },
+          "documentVersion": {
+            "type": "integer",
+            "description": "Work version that was exported.",
+            "format": "int32"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Suggested download name."
+          },
+          "fileSize": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Size in bytes, when succeeded.",
+            "format": "int64"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Why the export failed (user-facing)."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Content that could not be rendered (user-facing)."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the export was requested.",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "When processing started.",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "When processing finished.",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "When the file stops being available.",
+            "format": "date-time"
+          },
+          "downloadUrl": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Relative URL of the file, when succeeded."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Status of an export job. Poll until `status` is succeeded or failed."
+      },
+      "ExportStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "expired"
+        ]
       },
       "FontFamilyOption": {
         "enum": [
@@ -1407,6 +1801,10 @@
         "additionalProperties": false,
         "description": "Chapter or section. The heading level is the nesting depth (1..5); numbering is generated."
       },
+      "Stream": {
+        "type": "string",
+        "format": "binary"
+      },
       "TableCell": {
         "required": [
           "content",
@@ -1622,6 +2020,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Exports"
+    },
     {
       "name": "Health"
     },

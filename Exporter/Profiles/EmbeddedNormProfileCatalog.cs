@@ -1,18 +1,20 @@
 using System.Reflection;
-using System.Text.Json;
 using Domain.Profiles;
 
 namespace Exporter.Profiles;
 
-/// <summary>Loads norm profiles shipped as embedded JSON resources (Exporter/Profiles/*.json).</summary>
-public sealed class EmbeddedNormProfileCatalog : INormProfileCatalog
+/// <summary>Full norm profiles, including formatting rules (used by the generators).</summary>
+public interface INormProfileStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        ReadCommentHandling = JsonCommentHandling.Skip,
-    };
+    NormProfile? Find(string id);
 
-    private readonly IReadOnlyList<NormProfileInfo> _profiles;
+    NormProfile GetRequired(string id);
+}
+
+/// <summary>Loads norm profiles shipped as embedded JSON resources (Exporter/Profiles/*.json).</summary>
+public sealed class EmbeddedNormProfileCatalog : INormProfileCatalog, INormProfileStore
+{
+    private readonly IReadOnlyList<NormProfile> _profiles;
 
     public EmbeddedNormProfileCatalog()
     {
@@ -20,26 +22,28 @@ public sealed class EmbeddedNormProfileCatalog : INormProfileCatalog
         _profiles = assembly.GetManifestResourceNames()
             .Where(n => n.StartsWith("Exporter.Profiles.", StringComparison.Ordinal) && n.EndsWith(".json", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)
-            .Select(name => Load(assembly, name))
+            .Select(name => NormProfileLoader.Parse(ReadResource(assembly, name)))
             .ToList();
 
         var duplicate = _profiles.GroupBy(p => p.Id).FirstOrDefault(g => g.Count() > 1);
         if (duplicate is not null)
-            throw new InvalidOperationException($"Duplicate norm profile id '{duplicate.Key}'.");
+            throw new InvalidNormProfileException($"Duplicate norm profile id '{duplicate.Key}'.");
     }
 
-    public IReadOnlyList<NormProfileInfo> List() => _profiles;
+    public IReadOnlyList<NormProfileInfo> List() => _profiles.Select(p => p.ToInfo()).ToList();
 
-    public NormProfileInfo? Find(string id) => _profiles.FirstOrDefault(p => p.Id == id);
+    NormProfileInfo? INormProfileCatalog.Find(string id) => Find(id)?.ToInfo();
 
-    private static NormProfileInfo Load(Assembly assembly, string resourceName)
+    public NormProfile? Find(string id) => _profiles.FirstOrDefault(p => p.Id == id);
+
+    public NormProfile GetRequired(string id) =>
+        Find(id) ?? throw new KeyNotFoundException($"Norm profile '{id}' not found.");
+
+    private static string ReadResource(Assembly assembly, string resourceName)
     {
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Missing resource {resourceName}.");
-        var profile = JsonSerializer.Deserialize<NormProfileInfo>(stream, JsonOptions)
-            ?? throw new InvalidOperationException($"Empty norm profile {resourceName}.");
-        if (string.IsNullOrWhiteSpace(profile.Id) || profile.MaxSectionDepth is < 1 or > 9)
-            throw new InvalidOperationException($"Invalid norm profile {resourceName}.");
-        return profile;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }
