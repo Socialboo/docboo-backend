@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Domain.Assets;
 using Domain.Documents;
 using Exporter.Docx;
 using Exporter.Profiles;
@@ -33,7 +34,13 @@ public sealed class DocxDocumentExporterTests : IDisposable
     internal static DocumentModel Golden() =>
         DocumentJson.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Samples", "golden-tcc.json")));
 
-    internal static DocxExportResult Export(DocumentModel doc) => new DocxDocumentExporter(Profiles).Export(doc);
+    /// <summary>The golden figure image (assetId "asset-fluxo").</summary>
+    internal static IReadOnlyDictionary<string, ImageData> GoldenImages() => new Dictionary<string, ImageData>
+    {
+        ["asset-fluxo"] = new(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Samples", "fluxo-exportacao.png")), "image/png", 600, 240),
+    };
+
+    internal static DocxExportResult Export(DocumentModel doc) => new DocxDocumentExporter(Profiles).Export(doc, GoldenImages());
 
     private Body Body => _docx.MainDocumentPart!.Document!.Body!;
 
@@ -117,6 +124,7 @@ public sealed class DocxDocumentExporterTests : IDisposable
         Assert.Equal("240", quote.StyleParagraphProperties.SpacingBetweenLines!.Line!.Value); // single
         Assert.Equal("20", quote.StyleRunProperties!.FontSize!.Val!.Value); // 10 pt
         Assert.Single(ParagraphsWithStyle(StyleIds.Quote));
+        Assert.Contains("(LIMA, 2019, p. 52)", ParagraphsWithStyle(StyleIds.Quote).Single().InnerText);
     }
 
     [Fact]
@@ -148,8 +156,8 @@ public sealed class DocxDocumentExporterTests : IDisposable
     [Fact]
     public void Cover_and_title_page_contain_the_metadata()
     {
-        var sections = Body.Elements<Table>().ToList();
-        Assert.Equal(2, sections.Count); // layout tables of cover and title page
+        // The first two tables are the layout tables of the cover and the title page.
+        var sections = Body.Elements<Table>().Take(2).ToList();
 
         var cover = sections[0].InnerText;
         Assert.Contains("Universidade Federal Exemplo", cover);
@@ -168,7 +176,8 @@ public sealed class DocxDocumentExporterTests : IDisposable
     [Fact]
     public void Abstracts_have_titles_text_and_keywords()
     {
-        Assert.Equal(["RESUMO", "ABSTRACT"], ParagraphsWithStyle(StyleIds.PreTextualTitle).Select(p => p.InnerText));
+        Assert.Equal(["RESUMO", "ABSTRACT", "LISTA DE FIGURAS", "LISTA DE TABELAS", "SUMÁRIO"],
+            ParagraphsWithStyle(StyleIds.PreTextualTitle).Select(p => p.InnerText));
         var abstractText = ParagraphsWithStyle(StyleIds.AbstractText).Select(p => p.InnerText).ToList();
         Assert.Contains("Palavras-chave: formatação; documentos estruturados; normalização.", abstractText);
         Assert.Contains("Keywords: formatting; structured documents; standards.", abstractText);
@@ -184,21 +193,173 @@ public sealed class DocxDocumentExporterTests : IDisposable
         Assert.Equal(3, listItems.Count);
         Assert.All(listItems, p => Assert.NotNull(p.ParagraphProperties!.NumberingProperties));
         Assert.Single(Body.Descendants<Break>()); // hardBreak in the conclusion
+        Assert.NotNull(_docx.MainDocumentPart!.DocumentSettingsPart!.Settings!.Descendants<DoNotExpandShiftReturn>().SingleOrDefault());
     }
 
     [Fact]
-    public void Reports_content_not_rendered_yet()
+    public void Renders_everything_in_the_golden_sample_without_warnings()
     {
-        var warnings = string.Join("\n", _result.Warnings);
+        Assert.Empty(_result.Warnings);
+    }
 
-        Assert.Contains("1 figura(s)", warnings);
-        Assert.Contains("1 tabela(s)", warnings);
-        Assert.Contains("1 nota(s) de rodapé", warnings);
-        Assert.Contains("3 citação(ões)", warnings);
-        Assert.Contains("referências", warnings);
-        Assert.Contains("1 apêndice(s)", warnings);
-        Assert.Contains("1 anexo(s)", warnings);
-        Assert.Contains("sumário", warnings);
+    [Fact]
+    public void Formats_citations_author_date()
+    {
+        var text = Body.InnerText;
+
+        Assert.Contains("(SOUZA; PEREIRA, 2021)", text);
+        Assert.Contains("Segundo Lima (2019, p. 45)", text);
+        Assert.Contains("(LIMA, 2019, p. 52)", text);
+    }
+
+    [Fact]
+    public void Writes_footnotes_with_separators_and_reference_marks()
+    {
+        var footnotes = _docx.MainDocumentPart!.FootnotesPart!.Footnotes!.Elements<Footnote>().ToList();
+
+        Assert.Equal([-1L, 0L, 1L], footnotes.Select(f => f.Id!.Value));
+        Assert.Equal(FootnoteEndnoteValues.Separator, footnotes[0].Type!.Value);
+        Assert.Contains("Por estrutura entende-se", footnotes[2].InnerText);
+        Assert.Equal(StyleIds.FootnoteText, footnotes[2].Descendants<ParagraphStyleId>().Single().Val!.Value);
+
+        var reference = Body.Descendants<FootnoteReference>().Single();
+        Assert.Equal(1, reference.Id!.Value);
+        Assert.Equal(StyleIds.FootnoteReference, ((W.Run)reference.Parent!).RunProperties!.RunStyle!.Val!.Value);
+        Assert.Equal("20", Style(StyleIds.FootnoteText).StyleRunProperties!.FontSize!.Val!.Value);
+    }
+
+    [Fact]
+    public void Writes_figure_with_numbered_caption_image_and_source()
+    {
+        var caption = ParagraphsWithStyle(StyleIds.Caption).First(p => p.InnerText.StartsWith("Figura"));
+        Assert.Equal("Figura 1 – Fluxo de exportação do documento", caption.InnerText);
+        Assert.Equal(" SEQ Figura \\* ARABIC ", caption.Descendants<SimpleField>().Single().Instruction!.Value);
+
+        var figure = ParagraphsWithStyle(StyleIds.Figure).Single();
+        var extent = figure.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>().Single();
+        Assert.Equal(Units.CmToEmu(16 * 0.8), extent.Cx!.Value);           // 80% of the 16 cm text width
+        Assert.Equal(extent.Cx.Value * 240 / 600, extent.Cy!.Value);       // keeps the aspect ratio
+        var image = _docx.MainDocumentPart!.ImageParts.Single();
+        Assert.Equal("image/png", image.ContentType);
+
+        var source = ParagraphsWithStyle(StyleIds.Source);
+        Assert.Contains(source, p => p.InnerText == "Fonte: Elaborado pela autora (2026).");
+    }
+
+    [Fact]
+    public void Writes_table_with_caption_open_sides_and_header_rule()
+    {
+        var caption = ParagraphsWithStyle(StyleIds.Caption).Single(p => p.InnerText.StartsWith("Tabela"));
+        Assert.Equal("Tabela 1 – Tempo médio de formatação por documento", caption.InnerText);
+
+        var table = Body.Elements<Table>().Single(t => t.InnerText.Contains("Manual"));
+        var borders = table.GetFirstChild<TableProperties>()!.TableBorders!;
+        Assert.Equal(BorderValues.Single, borders.TopBorder!.Val!.Value);
+        Assert.Equal(BorderValues.Single, borders.BottomBorder!.Val!.Value);
+        Assert.Equal(BorderValues.Nil, borders.LeftBorder!.Val!.Value);
+        Assert.Equal(BorderValues.Nil, borders.InsideVerticalBorder!.Val!.Value);
+
+        var header = table.Elements<W.TableRow>().First();
+        Assert.NotNull(header.TableRowProperties!.GetFirstChild<TableHeader>());
+        Assert.All(header.Elements<W.TableCell>(), c => Assert.NotNull(c.TableCellProperties!.TableCellBorders!.BottomBorder));
+        Assert.Equal(StyleIds.TableHeader, header.Descendants<ParagraphStyleId>().First().Val!.Value);
+    }
+
+    [Fact]
+    public void Merges_table_cells_with_row_and_column_spans()
+    {
+        var doc = Golden().WithBlocks(new TableBlock
+        {
+            Id = "t-span",
+            Title = [new TextInline { Text = "Spans", Marks = [] }],
+            Source = [],
+            Rows =
+            [
+                new Domain.Documents.TableRow { Header = true, Cells = [Cell("A", colSpan: 2), Cell("B")] },
+                new Domain.Documents.TableRow { Header = false, Cells = [Cell("C", rowSpan: 2), Cell("D"), Cell("E")] },
+                new Domain.Documents.TableRow { Header = false, Cells = [Cell("F"), Cell("G")] },
+            ],
+        });
+
+        using var stream = new MemoryStream(Export(doc).Content);
+        using var docx = WordprocessingDocument.Open(stream, false);
+        var table = docx.MainDocumentPart!.Document!.Body!.Elements<Table>().Single(t => t.InnerText.Contains("ABCDEFG") || t.InnerText.StartsWith("AB"));
+        var rows = table.Elements<W.TableRow>().ToList();
+
+        Assert.Equal(3, table.GetFirstChild<TableGrid>()!.Elements<GridColumn>().Count());
+        Assert.Equal(2, rows[0].Elements<W.TableCell>().First().TableCellProperties!.GridSpan!.Val!.Value);
+        Assert.Equal(MergedCellValues.Restart, rows[1].Elements<W.TableCell>().First().TableCellProperties!.VerticalMerge!.Val!.Value);
+        var continued = rows[2].Elements<W.TableCell>().First();
+        Assert.NotNull(continued.TableCellProperties!.VerticalMerge);
+        Assert.Null(continued.TableCellProperties.VerticalMerge!.Val);
+        Assert.Equal(["", "F", "G"], rows[2].Elements<W.TableCell>().Select(c => c.InnerText));
+        Assert.Empty(new OpenXmlValidator(FileFormatVersions.Office2019).Validate(docx));
+    }
+
+    private static Domain.Documents.TableCell Cell(string text, int colSpan = 1, int rowSpan = 1) =>
+        new() { Content = [new TextInline { Text = text, Marks = [] }], ColSpan = colSpan, RowSpan = rowSpan };
+
+    [Fact]
+    public void Writes_table_of_contents_and_lists_as_prefilled_fields()
+    {
+        var codes = Body.Descendants<FieldCode>().Select(f => f.Text).ToList();
+        Assert.Contains(" TOC \\o \"1-5\" \\h \\z \\u ", codes);
+        Assert.Contains(" TOC \\h \\z \\c \"Figura\" ", codes);
+        Assert.Contains(" TOC \\h \\z \\c \"Tabela\" ", codes);
+
+        Assert.Equal(
+            ["1 Introdução", "1.1 Objetivos", "2 Fundamentação teórica", "2.1 Documentos estruturados", "2.1.1 Estilos de parágrafo",
+             "3 Resultados", "4 Conclusão", "REFERÊNCIAS", "APÊNDICE A – Questionário aplicado aos participantes",
+             "ANEXO A – Modelo de folha de aprovação da instituição"],
+            Body.Descendants<Paragraph>().Where(p => p.ParagraphProperties?.ParagraphStyleId?.Val?.Value?.StartsWith("TOC") == true)
+                .Select(p => p.InnerText.Replace(codes.First(c => c.Contains("\\o")), "")));
+
+        Assert.Equal(["Figura 1 – Fluxo de exportação do documento", "Tabela 1 – Tempo médio de formatação por documento"],
+            ParagraphsWithStyle(StyleIds.TableOfFigures).Select(p => string.Concat(p.Descendants<W.Text>().Select(t => t.Text))));
+
+        Assert.True(_docx.MainDocumentPart!.DocumentSettingsPart!.Settings!.GetFirstChild<UpdateFieldsOnOpen>()!.Val!.Value);
+        Assert.Equal("toc 1", Style(StyleIds.Toc(1)).StyleName!.Val!.Value);
+        Assert.NotNull(Style(StyleIds.Toc(1)).StyleRunProperties!.Bold);
+    }
+
+    [Fact]
+    public void Writes_references_sorted_with_highlighted_titles()
+    {
+        var entries = ParagraphsWithStyle(StyleIds.Bibliography);
+
+        Assert.Equal(["BIBLIOTECA CENTRAL EXEMPLO", "LIMA, Roberto", "SOUZA, Ana; PEREIRA, Carlos"], entries.Select(e => e.InnerText.Split('.')[0]));
+        Assert.Equal("Editoração eletrônica", entries[1].Descendants<W.Run>().Single(r => r.RunProperties?.Bold is not null).InnerText);
+        Assert.Equal("240", Style(StyleIds.Bibliography).StyleParagraphProperties!.SpacingBetweenLines!.Line!.Value); // single
+        Assert.Equal("240", Style(StyleIds.Bibliography).StyleParagraphProperties!.SpacingBetweenLines!.After!.Value); // 12 pt
+    }
+
+    [Fact]
+    public void Writes_post_textual_titles_in_order()
+    {
+        Assert.Equal(
+            ["REFERÊNCIAS", "APÊNDICE A – Questionário aplicado aos participantes", "ANEXO A – Modelo de folha de aprovação da instituição"],
+            ParagraphsWithStyle(StyleIds.PostTextualTitle).Select(p => p.InnerText));
+        var style = Style(StyleIds.PostTextualTitle).StyleParagraphProperties!;
+        Assert.Equal(0, style.OutlineLevel!.Val!.Value);
+        Assert.NotNull(style.PageBreakBefore);
+    }
+
+    [Theory]
+    [InlineData(0, "A")]
+    [InlineData(25, "Z")]
+    [InlineData(26, "AA")]
+    [InlineData(27, "AB")]
+    public void Letters_appendices(int index, string expected)
+    {
+        Assert.Equal(expected, BodyWriter.Letters(index));
+    }
+
+    [Fact]
+    public void Warns_when_a_figure_image_is_missing()
+    {
+        var result = new DocxDocumentExporter(Profiles).Export(Golden(), new Dictionary<string, ImageData>());
+
+        Assert.Contains(result.Warnings, w => w.Contains("1 figura(s) sem imagem"));
     }
 
     [Fact]
@@ -222,7 +383,7 @@ public sealed class DocxDocumentExporterTests : IDisposable
         Assert.Equal("Arial", fonts.Ascii!.Value);
 
         var sections = docx.MainDocumentPart.Document!.Body!.Descendants<SectionProperties>().ToList();
-        Assert.Equal(3, sections.Count); // title page, abstract, textual
+        Assert.Equal(3, sections.Count); // title page, pre-textual, textual
         Assert.Equal(1, sections[0].GetFirstChild<PageNumberType>()?.Start?.Value); // title page is still page 1
         Assert.DoesNotContain("ABSTRACT", docx.MainDocumentPart.Document.Body.InnerText);
     }
@@ -232,5 +393,16 @@ public sealed class DocxDocumentExporterTests : IDisposable
     {
         Assert.Equal("Formatação automática de trabalhos acadêmicos", _docx.PackageProperties.Title);
         Assert.Equal("Maria Exemplo da Silva", _docx.PackageProperties.Creator);
+    }
+}
+
+internal static class GoldenDocumentExtensions
+{
+    /// <summary>Golden document with extra blocks at the end of its last chapter.</summary>
+    public static DocumentModel WithBlocks(this DocumentModel doc, params Block[] blocks)
+    {
+        var sections = doc.Textual.Sections.ToList();
+        sections[^1] = sections[^1] with { Blocks = [.. sections[^1].Blocks, .. blocks] };
+        return doc with { Textual = new Textual { Sections = sections } };
     }
 }

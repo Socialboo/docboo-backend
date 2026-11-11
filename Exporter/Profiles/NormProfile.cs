@@ -27,9 +27,17 @@ public sealed record NormProfile
     public required TextRules SmallText { get; init; }
 
     public required LongQuoteRules LongQuote { get; init; }
+
+    /// <summary>Titles above figures/tables ("Figura 1 – ...") and the source line below them.</summary>
+    public required CaptionRules Captions { get; init; }
+
+    /// <summary>Reference list entries.</summary>
+    public required ReferenceListRules References { get; init; }
+
     public required HeadingRules Headings { get; init; }
     public required PageNumberingRules PageNumbering { get; init; }
     public required PreTextualRules PreTextual { get; init; }
+    public required PostTextualRules PostTextual { get; init; }
 
     public NormProfileInfo ToInfo() => new(Id, Name, Description, MaxSectionDepth);
 
@@ -97,6 +105,31 @@ public sealed record LongQuoteRules
     public required double LineSpacing { get; init; }
 }
 
+public sealed record CaptionRules
+{
+    public required TextAlignment Alignment { get; init; }
+    public required TextAlignment SourceAlignment { get; init; }
+
+    /// <summary>Label and SEQ field name of figures (also used by the list of figures).</summary>
+    public required string FigureLabel { get; init; }
+
+    public required string TableLabel { get; init; }
+
+    /// <summary>Between the number and the title ("Figura 1 – Título").</summary>
+    public required string Separator { get; init; }
+
+    /// <summary>Prefix of the source line ("Fonte: ...").</summary>
+    public required string SourceLabel { get; init; }
+}
+
+public sealed record ReferenceListRules
+{
+    public required double LineSpacing { get; init; }
+
+    /// <summary>Space between entries (a blank single-spaced line).</summary>
+    public required double SpaceAfterPt { get; init; }
+}
+
 public sealed record HeadingRules
 {
     /// <summary>Progressive numbering (1, 1.1, 1.1.1, ...).</summary>
@@ -141,6 +174,20 @@ public sealed record PreTextualRules
     public required string KeywordsLabelForeign { get; init; }
     public required string AdvisorLabel { get; init; }
     public required string CoAdvisorLabel { get; init; }
+    public required string TocTitle { get; init; }
+    public required string ListOfFiguresTitle { get; init; }
+    public required string ListOfTablesTitle { get; init; }
+}
+
+public sealed record PostTextualRules
+{
+    public required string ReferencesTitle { get; init; }
+
+    /// <summary>"APÊNDICE" in "APÊNDICE A – Título".</summary>
+    public required string AppendixLabel { get; init; }
+
+    public required string AnnexLabel { get; init; }
+    public required string LabelSeparator { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<TextAlignment>))]

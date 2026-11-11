@@ -50,6 +50,8 @@ internal static class StyleSheetBuilder
         styles.Append(ParagraphStyle(StyleIds.SectionEnd, "Docboo Section End", StyleIds.Normal, isDefault: false,
             Paragraph(TextAlignment.Left, 1.0, firstLineCm: 0), Run(1)));
 
+        AddPhase4Styles(styles, profile);
+
         var pageNumberAlignment = profile.PageNumbering.Position == PageNumberPosition.TopRight ? TextAlignment.Right : TextAlignment.Center;
         styles.Append(ParagraphStyle(StyleIds.Header, "header", StyleIds.Normal, isDefault: false,
             Paragraph(pageNumberAlignment, 1.0, firstLineCm: 0), Run(profile.PageNumbering.FontSizePt)));
@@ -57,6 +59,59 @@ internal static class StyleSheetBuilder
             Paragraph(pageNumberAlignment, 1.0, firstLineCm: 0), Run(profile.PageNumbering.FontSizePt)));
 
         return styles;
+    }
+
+    private static void AddPhase4Styles(Styles styles, NormProfile profile)
+    {
+        var small = profile.SmallText;
+        var bodyLinePt = profile.Body.FontSizePt * profile.Body.LineSpacing;
+        var textWidth = Units.CmToTwips(profile.Page.WidthCm - profile.Page.MarginLeftCm - profile.Page.MarginRightCm);
+
+        styles.Append(ParagraphStyle(StyleIds.Caption, "caption", StyleIds.Normal, isDefault: false,
+            Paragraph(profile.Captions.Alignment, small.LineSpacing, firstLineCm: 0, spaceBeforePt: bodyLinePt, keepNext: true),
+            Run(small.FontSizePt)));
+        styles.Append(ParagraphStyle(StyleIds.Figure, "Docboo Figure", StyleIds.Normal, isDefault: false,
+            Paragraph(TextAlignment.Center, 1.0, firstLineCm: 0, keepNext: true), null));
+        styles.Append(ParagraphStyle(StyleIds.Source, "Docboo Source", StyleIds.Normal, isDefault: false,
+            Paragraph(profile.Captions.SourceAlignment, small.LineSpacing, firstLineCm: 0, spaceAfterPt: bodyLinePt),
+            Run(small.FontSizePt)));
+        styles.Append(ParagraphStyle(StyleIds.TableText, "Docboo Table Text", StyleIds.Normal, isDefault: false,
+            Paragraph(TextAlignment.Left, small.LineSpacing, firstLineCm: 0), Run(small.FontSizePt)));
+        styles.Append(ParagraphStyle(StyleIds.TableHeader, "Docboo Table Header", StyleIds.TableText, isDefault: false,
+            Paragraph(TextAlignment.Center, small.LineSpacing, firstLineCm: 0), Run(small.FontSizePt, bold: true)));
+        styles.Append(ParagraphStyle(StyleIds.FootnoteText, "footnote text", StyleIds.Normal, isDefault: false,
+            Paragraph(TextAlignment.Justify, small.LineSpacing, firstLineCm: 0), Run(small.FontSizePt)));
+
+        var footnoteReference = new Style { Type = StyleValues.Character, StyleId = StyleIds.FootnoteReference };
+        footnoteReference.Append(new StyleName { Val = "footnote reference" });
+        footnoteReference.Append(new StyleRunProperties(new VerticalTextAlignment { Val = VerticalPositionValues.Superscript }));
+        styles.Append(footnoteReference);
+
+        // Table of contents and lists: entries aligned left, page number at the right margin with dot leaders.
+        foreach (var level in profile.Headings.Levels)
+        {
+            var pPr = Paragraph(TextAlignment.Left, profile.Body.LineSpacing, firstLineCm: 0);
+            pPr.InsertBefore(new Tabs(new TabStop { Val = TabStopValues.Right, Leader = TabStopLeaderCharValues.Dot, Position = textWidth }),
+                pPr.GetFirstChild<SpacingBetweenLines>());
+            styles.Append(ParagraphStyle(StyleIds.Toc(level.Level), $"toc {level.Level}", StyleIds.Normal, isDefault: false,
+                pPr, Run(null, bold: level.Bold, italic: level.Italic, allCaps: level.AllCaps)));
+        }
+        var tofPr = Paragraph(TextAlignment.Left, profile.Body.LineSpacing, firstLineCm: 0);
+        tofPr.InsertBefore(new Tabs(new TabStop { Val = TabStopValues.Right, Leader = TabStopLeaderCharValues.Dot, Position = textWidth }),
+            tofPr.GetFirstChild<SpacingBetweenLines>());
+        styles.Append(ParagraphStyle(StyleIds.TableOfFigures, "table of figures", StyleIds.Normal, isDefault: false, tofPr, null));
+
+        // Post-textual titles behave like unnumbered primary sections: new page, outline level 1 (in the TOC).
+        var post = Paragraph(TextAlignment.Center, profile.Body.LineSpacing, firstLineCm: 0,
+            spaceAfterPt: profile.Headings.SpaceAfterPt, keepNext: true, pageBreakBefore: true);
+        post.Append(new OutlineLevel { Val = 0 });
+        var h1 = profile.Heading(1);
+        styles.Append(ParagraphStyle(StyleIds.PostTextualTitle, "Docboo Post-textual Title", StyleIds.Normal, isDefault: false,
+            post, Run(null, bold: h1.Bold, italic: h1.Italic, allCaps: h1.AllCaps)));
+
+        styles.Append(ParagraphStyle(StyleIds.Bibliography, "Bibliography", StyleIds.Normal, isDefault: false,
+            Paragraph(TextAlignment.Left, profile.References.LineSpacing, firstLineCm: 0, spaceAfterPt: profile.References.SpaceAfterPt),
+            null));
     }
 
     private static DocDefaults DocDefaults(NormProfile profile, string fontFamily) =>
@@ -96,7 +151,7 @@ internal static class StyleSheetBuilder
         var style = new Style { Type = StyleValues.Paragraph, StyleId = id, Default = isDefault ? true : null };
         style.Append(new StyleName { Val = name });
         if (basedOn is not null) style.Append(new BasedOn { Val = basedOn });
-        if (id.StartsWith("Heading", StringComparison.Ordinal) || id == StyleIds.PreTextualTitle)
+        if (id.StartsWith("Heading", StringComparison.Ordinal) || id is StyleIds.PreTextualTitle or StyleIds.PostTextualTitle)
             style.Append(new NextParagraphStyle { Val = StyleIds.Normal });
         style.Append(new PrimaryStyle());
         if (pPr is not null) style.Append(pPr);
