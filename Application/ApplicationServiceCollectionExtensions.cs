@@ -1,4 +1,5 @@
 using Application.Documents;
+using Application.Exports;
 using Application.Works;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<DocumentValidator>();
         services.AddScoped<WorkService>();
+        services.AddOptions<ExportOptions>();
+        services.AddScoped<ExportService>();
+        services.AddScoped<ExportJobProcessor>();
         return services;
     }
 }

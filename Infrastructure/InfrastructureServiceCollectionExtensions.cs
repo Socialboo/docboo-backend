@@ -1,6 +1,10 @@
 using Application.Abstractions;
+using Application.Exports;
+using Exporter.Pdf;
+using Infrastructure.Exports;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +27,25 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddOptions<LocalUserOptions>().Bind(configuration.GetSection(LocalUserOptions.SectionName));
         services.AddSingleton<ICurrentUser, LocalCurrentUser>();
+
+        // Exports: Open XML + LibreOffice behind application ports, disk storage, in-process queue.
+        services.AddScoped<IExportJobRepository, ExportJobRepository>();
+        services.AddOptions<ExportOptions>().Bind(configuration.GetSection(ExportOptions.SectionName));
+        services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName));
+        services.AddOptions<LibreOfficeOptions>().Bind(configuration.GetSection(LibreOfficeOptions.SectionName));
+        services.AddSingleton<IFileStorage, DiskFileStorage>();
+        services.AddSingleton<IDocumentGenerator, DocxGeneratorAdapter>();
+        services.AddSingleton<IPdfConverter, LibreOfficePdfConverterAdapter>();
+        services.AddSingleton<ChannelExportQueue>();
+        services.AddSingleton<IExportQueue>(sp => sp.GetRequiredService<ChannelExportQueue>());
+        return services;
+    }
+
+    /// <summary>Background export worker and expired-file cleanup (Channel-based; swap for Hangfire later).</summary>
+    public static IServiceCollection AddExportWorkers(this IServiceCollection services)
+    {
+        services.AddHostedService<ExportWorker>();
+        services.AddHostedService<ExportCleanupService>();
         return services;
     }
 

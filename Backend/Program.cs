@@ -10,6 +10,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The build-time OpenAPI generator (GetDocument.Insider) runs this entry point without a database.
+var isOpenApiGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
+
 var connectionString = builder.Configuration.GetDefaultConnectionString();
 
 // Same JSON rules for controllers and for the OpenAPI generator (which reads the minimal-API options),
@@ -36,11 +39,14 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
     .AddExporter();
+if (!isOpenApiGeneration) builder.Services.AddExportWorkers();
 builder.Services.Configure<DocumentLimits>(builder.Configuration.GetSection(DocumentLimits.SectionName));
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
-    .AddNpgSql(connectionString, name: "postgres", tags: ["ready"]);
+    .AddNpgSql(connectionString, name: "postgres", tags: ["ready"])
+    // Without LibreOffice the API still works (DOCX export); PDF export is reported as unavailable.
+    .AddCheck<Backend.Health.LibreOfficeHealthCheck>("libreoffice", tags: ["ready"]);
 
 var app = builder.Build();
 
@@ -68,8 +74,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions());
 
 app.MapControllers();
 
-// The build-time OpenAPI generator (GetDocument.Insider) runs this entry point without a database.
-if (Assembly.GetEntryAssembly()?.GetName().Name != "GetDocument.Insider")
+if (!isOpenApiGeneration)
 {
     await app.MigrateDatabaseAsync();
 }

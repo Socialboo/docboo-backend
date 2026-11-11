@@ -1,13 +1,17 @@
+using System.Text.Json;
 using Domain.Documents;
+using Domain.Exports;
 using Domain.Works;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Work> Works => Set<Work>();
+    public DbSet<ExportJob> ExportJobs => Set<ExportJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,10 +25,48 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         work.Property(w => w.Version).HasColumnName("version").IsConcurrencyToken();
         work.Property(w => w.CreatedAt).HasColumnName("created_at");
         work.Property(w => w.UpdatedAt).HasColumnName("updated_at");
-
         // The document is stored as JSONB using the canonical document serializer, so the database
         // holds exactly what the API returns (polymorphic blocks included).
-        work.Property(w => w.Document)
+        MapDocument(work.Property(w => w.Document));
+        work.HasIndex(w => new { w.UserId, w.UpdatedAt }).HasDatabaseName("ix_works_user_id_updated_at");
+
+        var job = modelBuilder.Entity<ExportJob>();
+        job.ToTable("export_jobs");
+        job.HasKey(j => j.Id);
+        job.Property(j => j.Id).HasColumnName("id").ValueGeneratedNever();
+        job.Property(j => j.WorkId).HasColumnName("work_id");
+        job.Property(j => j.UserId).HasColumnName("user_id");
+        job.Property(j => j.Format).HasColumnName("format").HasConversion<string>().HasMaxLength(16);
+        job.Property(j => j.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
+        job.Property(j => j.DocumentVersion).HasColumnName("document_version");
+        MapDocument(job.Property(j => j.Document)).HasColumnName("document_snapshot");
+        job.Property(j => j.FileName).HasColumnName("file_name").HasMaxLength(128);
+        job.Property(j => j.FileKey).HasColumnName("file_key").HasMaxLength(128);
+        job.Property(j => j.FileSize).HasColumnName("file_size");
+        job.Property(j => j.Error).HasColumnName("error").HasMaxLength(1000);
+        job.Property(j => j.Warnings)
+            .HasColumnName("warnings")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                w => JsonSerializer.Serialize(w, (JsonSerializerOptions?)null),
+                s => JsonSerializer.Deserialize<List<string>>(s, (JsonSerializerOptions?)null) ?? new List<string>(),
+                new ValueComparer<IReadOnlyList<string>>(
+                    (a, b) => (a ?? new List<string>()).SequenceEqual(b ?? new List<string>()),
+                    w => w.Aggregate(0, (h, s) => HashCode.Combine(h, s)),
+                    w => w.ToList()));
+        job.Property(j => j.Attempts).HasColumnName("attempts");
+        job.Property(j => j.CreatedAt).HasColumnName("created_at");
+        job.Property(j => j.StartedAt).HasColumnName("started_at");
+        job.Property(j => j.CompletedAt).HasColumnName("completed_at");
+        job.Property(j => j.ExpiresAt).HasColumnName("expires_at");
+        job.Ignore(j => j.ContentType);
+        job.HasOne<Work>().WithMany().HasForeignKey(j => j.WorkId).OnDelete(DeleteBehavior.Cascade);
+        job.HasIndex(j => new { j.UserId, j.WorkId, j.CreatedAt }).HasDatabaseName("ix_export_jobs_user_work_created");
+        job.HasIndex(j => new { j.Status, j.ExpiresAt }).HasDatabaseName("ix_export_jobs_status_expires");
+    }
+
+    private static PropertyBuilder<DocumentModel> MapDocument(PropertyBuilder<DocumentModel> property) =>
+        property
             .HasColumnName("document")
             .HasColumnType("jsonb")
             .HasConversion(
@@ -34,7 +76,4 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                     (a, b) => ReferenceEquals(a, b) || (a != null && b != null && DocumentJson.Serialize(a) == DocumentJson.Serialize(b)),
                     d => DocumentJson.Serialize(d).GetHashCode(),
                     d => DocumentJson.Deserialize(DocumentJson.Serialize(d))));
-
-        work.HasIndex(w => new { w.UserId, w.UpdatedAt }).HasDatabaseName("ix_works_user_id_updated_at");
-    }
 }

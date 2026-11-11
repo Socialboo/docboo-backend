@@ -13,6 +13,12 @@ public abstract record ServiceError
     public sealed record Invalid(IReadOnlyList<ValidationError> Errors) : ServiceError;
 
     public sealed record Conflict(int CurrentVersion) : ServiceError;
+
+    /// <summary>The resource exists but is not in a state that allows the operation (e.g. file not generated yet).</summary>
+    public sealed record NotReady(string Reason) : ServiceError;
+
+    /// <summary>The resource existed but is no longer available (e.g. expired export).</summary>
+    public sealed record Gone(string Reason) : ServiceError;
 }
 
 public readonly record struct Result<T>

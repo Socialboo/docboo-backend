@@ -8,6 +8,8 @@ internal static class ServiceErrorMapping
 {
     public const string ConflictType = "https://docboo.local/problems/version-conflict";
     public const string NotFoundType = "https://docboo.local/problems/not-found";
+    public const string NotReadyType = "https://docboo.local/problems/not-ready";
+    public const string GoneType = "https://docboo.local/problems/gone";
 
     public static ActionResult ToActionResult(this ControllerBase controller, ServiceError error) => error switch
     {
@@ -19,6 +21,18 @@ internal static class ServiceErrorMapping
         ServiceError.Invalid invalid => controller.ValidationProblem(ToModelState(invalid.Errors)),
 
         ServiceError.Conflict conflict => ConflictProblem(controller, conflict.CurrentVersion),
+
+        ServiceError.NotReady notReady => controller.Problem(
+            statusCode: StatusCodes.Status409Conflict,
+            title: "Recurso ainda não disponível.",
+            detail: notReady.Reason,
+            type: NotReadyType),
+
+        ServiceError.Gone gone => controller.Problem(
+            statusCode: StatusCodes.Status410Gone,
+            title: "Recurso não está mais disponível.",
+            detail: gone.Reason,
+            type: GoneType),
 
         _ => throw new NotSupportedException(error.GetType().Name),
     };
