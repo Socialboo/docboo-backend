@@ -22,6 +22,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi("v1", options =>
 {
     options.AddSchemaTransformer<Backend.OpenApiTransformers.RequiredDiscriminatorSchemaTransformer>();
+    options.AddSchemaTransformer<Backend.OpenApiTransformers.NormalizeLineEndingsTransformer>();
+    options.AddOperationTransformer<Backend.OpenApiTransformers.NormalizeLineEndingsTransformer>();
     options.AddDocumentTransformer((document, _, _) =>
     {
         document.Info.Title = "Docboo API";

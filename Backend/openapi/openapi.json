@@ -281,7 +281,7 @@
         "tags": [
           "Works"
         ],
-        "summary": "Replaces the document (autosave). The document is sanitized and validated; send the\r\n`version` you loaded. A stale version returns 409 with `currentVersion`.",
+        "summary": "Replaces the document (autosave). The document is sanitized and validated; send the\n`version` you loaded. A stale version returns 409 with `currentVersion`.",
         "operationId": "SaveWorkDocument",
         "parameters": [
           {
@@ -828,7 +828,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Bibliographic item in CSL-JSON format (https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html).\r\nThe common fields are typed; any other CSL field is preserved in Dictionary&lt;string, JsonElement&gt;? CslItem.Extra."
+        "description": "Bibliographic item in CSL-JSON format (https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html).\nThe common fields are typed; any other CSL field is preserved in Dictionary&lt;string, JsonElement&gt;? CslItem.Extra."
       },
       "CslName": {
         "type": "object",
@@ -973,7 +973,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Source of truth for an academic work (schema v1). Edited by the frontend, stored as JSONB,\r\nand consumed by the Exporter. Breaking changes require a new int DocumentModel.SchemaVersion\r\nand a migration step (see docs/document-model.md)."
+        "description": "Source of truth for an academic work (schema v1). Edited by the frontend, stored as JSONB,\nand consumed by the Exporter. Breaking changes require a new int DocumentModel.SchemaVersion\nand a migration step (see docs/document-model.md)."
       },
       "FontFamilyOption": {
         "enum": [
