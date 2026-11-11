@@ -16,6 +16,7 @@ public sealed class WorkService(
     INormProfileCatalog profiles,
     DocumentValidator validator,
     IExportJobRepository exportJobs,
+    Application.Assets.IAssetRepository assets,
     IFileStorage storage,
     TimeProvider clock)
 {
@@ -72,11 +73,12 @@ public sealed class WorkService(
         var work = await repository.FindAsync(currentUser.UserId, id, ct);
         if (work is null) return new ServiceError.NotFound();
 
-        // Export jobs are removed by cascade; their files must be removed explicitly.
+        // Export jobs and assets are removed by cascade; their files must be removed explicitly.
         var jobs = await exportJobs.ListByWorkAsync(currentUser.UserId, id, int.MaxValue, ct);
+        var images = await assets.ListByWorkAsync(currentUser.UserId, id, ct);
         repository.Remove(work);
         await repository.SaveChangesAsync(ct);
-        foreach (var key in jobs.Select(j => j.FileKey).OfType<string>())
+        foreach (var key in jobs.Select(j => j.FileKey).OfType<string>().Concat(images.Select(a => a.StorageKey)))
             await storage.DeleteAsync(key, ct);
         return Result<bool>.Success(true);
     }

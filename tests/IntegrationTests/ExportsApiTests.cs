@@ -31,7 +31,9 @@ public sealed class ExportsApiTests(ApiFactory factory) : IClassFixture<ApiFacto
     {
         var created = await _client.PostAsJsonAsync("/api/works", new { profileId = "abnt-tcc" });
         var work = (await created.Content.ReadFromJsonAsync<WorkResponse>(Json))!;
+        var assetId = await AssetsApiTests.UploadGoldenImage(_client, work.Id);
         var doc = JsonNode.Parse(GoldenJson)!;
+        doc["textual"]!["sections"]![2]!["blocks"]![1]!["assetId"] = assetId;
         edit?.Invoke(doc);
         var saved = await _client.PutAsync($"/api/works/{work.Id}/document",
             new StringContent($"{{\"version\":{work.Version},\"document\":{doc.ToJsonString()}}}", Encoding.UTF8, "application/json"));
@@ -74,7 +76,7 @@ public sealed class ExportsApiTests(ApiFactory factory) : IClassFixture<ApiFacto
         Assert.Equal(ExportStatus.Succeeded, job.Status);
         Assert.Equal(work.Version, job.DocumentVersion);
         Assert.Equal("formatacao-automatica-de-trabalhos-academicos.docx", job.FileName);
-        Assert.Contains(job.Warnings, w => w.Contains("figura"));
+        Assert.Empty(job.Warnings);
         Assert.Equal($"/api/exports/{job.Id}/file", job.DownloadUrl);
 
         var file = await _client.GetAsync(job.DownloadUrl);
@@ -99,7 +101,8 @@ public sealed class ExportsApiTests(ApiFactory factory) : IClassFixture<ApiFacto
         var bytes = await _client.GetByteArrayAsync(job.DownloadUrl);
         Assert.Equal("%PDF", Encoding.ASCII.GetString(bytes, 0, 4));
         using var pdf = PdfDocument.Open(bytes);
-        Assert.Equal(8, pdf.NumberOfPages);
+        Assert.Equal(14, pdf.NumberOfPages);
+        Assert.Contains(pdf.GetPages(), p => p.GetImages().Any()); // the uploaded figure image
         Assert.Equal(bytes.LongLength, job.FileSize);
     }
 
@@ -137,6 +140,18 @@ public sealed class ExportsApiTests(ApiFactory factory) : IClassFixture<ApiFacto
         var errors = JsonNode.Parse(await response.Content.ReadAsStringAsync())!["errors"]!.AsObject();
         Assert.Contains("metadata.authors", errors.Select(e => e.Key));
         Assert.Contains("metadata.advisor", errors.Select(e => e.Key));
+    }
+
+    [Fact]
+    public async Task Rejects_export_when_a_figure_image_was_not_uploaded()
+    {
+        var work = await CreateWorkWithGolden(doc => doc["textual"]!["sections"]![2]!["blocks"]![1]!["assetId"] = "f00000000000000000000000000000ff");
+
+        var response = await RequestExport(work.Id, "pdf");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errors = JsonNode.Parse(await response.Content.ReadAsStringAsync())!["errors"]!.AsObject();
+        Assert.Contains("textual.sections[2].blocks[1].assetId", errors.Select(e => e.Key));
     }
 
     [Fact]
@@ -196,11 +211,18 @@ public sealed class ExportsApiTests(ApiFactory factory) : IClassFixture<ApiFacto
         var path = Path.Combine(factory.StorageRoot, $"{job.Id:N}.docx");
         Assert.True(File.Exists(path));
 
+        var imagePath = Directory.GetFiles(factory.StorageRoot, "asset-*")
+            .Single(f => File.GetCreationTimeUtc(f) >= DateTime.UtcNow.AddMinutes(-5) && f.Contains(GetAssetId(work)));
+
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/works/{work.Id}")).StatusCode);
 
         Assert.False(File.Exists(path));
+        Assert.False(File.Exists(imagePath)); // the work's uploaded image is removed too
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/exports/{job.Id}")).StatusCode);
     }
+
+    private static string GetAssetId(WorkResponse work) =>
+        ((FigureBlock)work.Document.Textual.Sections[2].Blocks[1]).AssetId;
 
     [Fact]
     public async Task Health_reports_libreoffice()

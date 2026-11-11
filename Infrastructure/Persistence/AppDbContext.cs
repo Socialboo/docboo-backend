@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Domain.Assets;
 using Domain.Documents;
 using Domain.Exports;
 using Domain.Works;
@@ -12,6 +13,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 {
     public DbSet<Work> Works => Set<Work>();
     public DbSet<ExportJob> ExportJobs => Set<ExportJob>();
+    public DbSet<Asset> Assets => Set<Asset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +65,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         job.HasOne<Work>().WithMany().HasForeignKey(j => j.WorkId).OnDelete(DeleteBehavior.Cascade);
         job.HasIndex(j => new { j.UserId, j.WorkId, j.CreatedAt }).HasDatabaseName("ix_export_jobs_user_work_created");
         job.HasIndex(j => new { j.Status, j.ExpiresAt }).HasDatabaseName("ix_export_jobs_status_expires");
+
+        var asset = modelBuilder.Entity<Asset>();
+        asset.ToTable("assets");
+        asset.HasKey(a => a.Id);
+        asset.Property(a => a.Id).HasColumnName("id").ValueGeneratedNever();
+        asset.Property(a => a.WorkId).HasColumnName("work_id");
+        asset.Property(a => a.UserId).HasColumnName("user_id");
+        asset.Property(a => a.ContentType).HasColumnName("content_type").HasMaxLength(32);
+        asset.Property(a => a.Width).HasColumnName("width");
+        asset.Property(a => a.Height).HasColumnName("height");
+        asset.Property(a => a.SizeBytes).HasColumnName("size_bytes");
+        asset.Property(a => a.OriginalName).HasColumnName("original_name").HasMaxLength(120);
+        asset.Property(a => a.StorageKey).HasColumnName("storage_key").HasMaxLength(128);
+        asset.Property(a => a.CreatedAt).HasColumnName("created_at");
+        asset.Ignore(a => a.DocumentId);
+        asset.HasOne<Work>().WithMany().HasForeignKey(a => a.WorkId).OnDelete(DeleteBehavior.Cascade);
+        asset.HasIndex(a => new { a.UserId, a.WorkId }).HasDatabaseName("ix_assets_user_work");
     }
 
     private static PropertyBuilder<DocumentModel> MapDocument(PropertyBuilder<DocumentModel> property) =>

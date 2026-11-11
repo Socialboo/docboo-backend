@@ -1,3 +1,6 @@
+using Application.Assets;
+using Application.Documents;
+using Domain.Assets;
 using Domain.Exports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +19,7 @@ public sealed class ExportJobProcessor(
     IDocumentGenerator generator,
     IPdfConverter pdfConverter,
     IFileStorage storage,
+    IAssetRepository assets,
     IOptions<ExportOptions> options,
     TimeProvider clock,
     ILogger<ExportJobProcessor> logger)
@@ -40,7 +44,8 @@ public sealed class ExportJobProcessor(
 
         try
         {
-            var generated = generator.GenerateDocx(job.Document);
+            var images = await LoadImagesAsync(job, ct);
+            var generated = generator.GenerateDocx(job.Document, images);
             var content = job.Format == ExportFormat.Pdf
                 ? await pdfConverter.ConvertAsync(generated.Content, ct)
                 : generated.Content;
@@ -64,6 +69,27 @@ public sealed class ExportJobProcessor(
             job.Fail(ex is ExportFailedException ? ex.Message : "Erro inesperado ao gerar o arquivo.", clock.GetUtcNow());
             await jobs.SaveChangesAsync(CancellationToken.None);
         }
+    }
+
+    private async Task<IReadOnlyDictionary<string, ImageData>> LoadImagesAsync(ExportJob job, CancellationToken ct)
+    {
+        var ids = DocumentWalker.Figures(job.Document)
+            .Select(f => Guid.TryParseExact(f.Figure.AssetId, "N", out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+        var images = new Dictionary<string, ImageData>(StringComparer.Ordinal);
+        if (ids.Count == 0) return images;
+
+        foreach (var asset in await assets.FindManyAsync(job.WorkId, ids, ct))
+        {
+            await using var stream = await storage.OpenReadAsync(asset.StorageKey, ct)
+                ?? throw new ExportFailedException($"A imagem \"{asset.OriginalName}\" não está mais disponível. Envie-a novamente.");
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, ct);
+            images[asset.DocumentId] = new ImageData(buffer.ToArray(), asset.ContentType, asset.Width, asset.Height);
+        }
+        return images;
     }
 
     /// <summary>Deletes files past their retention and marks the jobs as expired.</summary>
